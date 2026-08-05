@@ -58,6 +58,12 @@ def main(argv=None) -> int:
         default=10.5,
         help="stop launching new runs after this much wall time (session cap is 12h)",
     )
+    ap.add_argument(
+        "--data-root",
+        default=os.environ.get("NEURON_DEATH_DATA", ""),
+        help="override data.root for every child (defaults to $NEURON_DEATH_DATA). "
+        "Needed on Kaggle, where the dataset is mounted outside the repo.",
+    )
     ap.add_argument("--skip-complete", action="store_true", default=True)
     args = ap.parse_args(argv)
 
@@ -90,7 +96,7 @@ def main(argv=None) -> int:
                     queue = []
                 break
             cfg = queue.pop(0)
-            running[gpu] = (_launch(cfg, gpu, args.runs_root), cfg)
+            running[gpu] = (_launch(cfg, gpu, args.runs_root, args.data_root), cfg)
 
         time.sleep(2.0)
         for gpu, (proc, cfg) in list(running.items()):
