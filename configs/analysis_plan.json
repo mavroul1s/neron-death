@@ -1,0 +1,231 @@
+{
+  "_README": [
+    "FROZEN. Committed before any experimental data existed (CLAUDE.md §7).",
+    "Never modify this file. Never suggest modifying it after seeing results.",
+    "If a result is ambiguous the pre-specified response is ADD SEEDS, never",
+    "adjust a threshold. If this file contains a genuine specification error,",
+    "say so explicitly and stop -- do not fix it unilaterally.",
+    "Amendments, if ever unavoidable, go in a new file analysis_plan_v2.json",
+    "with its own timestamp, and both files are reported in the paper."
+  ],
+  "schema_version": 1,
+  "frozen_at": "2026-08-05T14:09:03Z",
+  "frozen_before_any_data": true,
+  "authority": "protocol_weeks_1_2_v2.md",
+
+  "task_indexing": {
+    "_note": [
+      "The protocol states windows in 1-based task numbers. The code logs",
+      "task_idx 0-based, plus task_idx = -1 for the pre-training 'init' probe.",
+      "Both forms are given here so no analysis ever converts by hand."
+    ],
+    "protocol_is_1_based": true,
+    "logged_is_0_based": true,
+    "init_probe_task_idx": -1,
+    "init_probe_excluded_from_all_windows": true
+  },
+
+  "outcome_measure": {
+    "primary": "online_accuracy",
+    "definition": [
+      "Per task, the fraction of training examples the network classified",
+      "correctly on the forward pass taken BEFORE the parameter update for that",
+      "minibatch, averaged over the task's single pass through the 60k images.",
+      "Logged as tasks.parquet:online_accuracy at probe_point='task_end'.",
+      "Measured on the training-mode forward pass, matching Dohare et al.'s",
+      "online measure. Consequence, stated in advance: for the dropout arm this",
+      "is measured under dropout, as it is in Dohare et al."
+    ],
+    "secondary": "probe_accuracy",
+    "secondary_definition": [
+      "Eval-mode top-1 accuracy on the fixed 2048-example held-out probe batch",
+      "under the current task's permutation, from the same forward pass as the",
+      "activation statistics. Reported alongside the primary; the dropout arm is",
+      "compared on this measure as well as the primary."
+    ]
+  },
+
+  "windows": {
+    "early": {"protocol_tasks": [1, 10], "task_idx": [0, 9], "n_tasks": 10},
+    "late": {"protocol_tasks": [151, 200], "task_idx": [150, 199], "n_tasks": 50},
+    "trend": {"protocol_tasks": [1, 200], "task_idx": [0, 199], "n_tasks": 200}
+  },
+
+  "statistics": {
+    "estimator": "IQM",
+    "estimator_definition": "interquartile mean; scipy.stats.trim_mean(x, 0.25), per Agarwal et al. 2021",
+    "interval": "stratified bootstrap percentile",
+    "stratification": "resample runs (seeds) with replacement, independently within each task column",
+    "confidence": 0.95,
+    "n_bootstrap": 10000,
+    "bootstrap_seed": 0,
+    "paired_across_arms": true,
+    "paired_rationale": [
+      "Seed s of every arm starts from the identical initialisation and sees the",
+      "identical task stream, so arm comparisons resample the same seed indices",
+      "for both arms. Pairing removes initialisation variance that would",
+      "otherwise swamp a 1-2 pp effect."
+    ],
+    "never_report": "bare means over seeds"
+  },
+
+  "decision_thresholds": {
+    "_source": "protocol §B.1, verbatim",
+    "approx_equal": {
+      "symbol": "≈",
+      "rule": "95% CI of the difference contains zero AND |delta| < 1.0 percentage points",
+      "abs_delta_pp": 1.0
+    },
+    "much_greater": {
+      "symbol": "≫",
+      "rule": "delta > 2.0 percentage points AND 95% CI excludes zero",
+      "delta_pp": 2.0
+    },
+    "otherwise": "inconclusive",
+    "response_to_inconclusive": "add seeds; never adjust a threshold"
+  },
+
+  "seeds": {
+    "gate": 5,
+    "tau_sweep": 10,
+    "c3_anomaly": 5,
+    "c5_optimizer": 5,
+    "eps_sweep": 5,
+    "_note": "seeds are 0..n-1 and are shared across arms within an experiment"
+  },
+
+  "gate": {
+    "_source": "protocol §A.4",
+    "criterion_verbatim": "Mean per-task accuracy over tasks 151-200 must be >= 3 percentage points below tasks 1-10, with a stratified-bootstrap 95% CI excluding zero, and dead_exact must rise monotonically.",
+    "setup": {
+      "dataset": "online permuted MNIST",
+      "n_tasks": 200,
+      "model": "784-500-500-500-10 MLP, ReLU, Kaiming init",
+      "optimizer": "SGD + momentum 0.9, batch 128",
+      "learning_rates": [0.01, 0.003, 0.001],
+      "seeds": 5,
+      "width_rationale": "width 500 rather than Dohare et al.'s 2000: they report plasticity loss is most pronounced at smaller widths (their Fig. 2b, middle panel)"
+    },
+    "accuracy_criterion": {
+      "statistic": "IQM of (early_window_online_accuracy - late_window_online_accuracy) per seed",
+      "min_drop_pp": 3.0,
+      "require_ci_excludes_zero": true
+    },
+    "dead_unit_criterion": {
+      "_operationalisation_note": [
+        "The protocol's phrase 'dead_exact must rise monotonically' is not",
+        "satisfiable as literal per-task monotonicity over 200 noisy",
+        "measurements. Operationalised here, before any data existed, as a",
+        "Spearman rank correlation -- which is itself a measure of monotonic",
+        "association and cannot be satisfied by a curve that rises then falls.",
+        "This operationalisation was chosen by the researcher on 2026-08-05 and",
+        "is frozen with the rest of this file."
+      ],
+      "metric": "dead_exact_frac",
+      "probe_batch": "current",
+      "probe_batch_rationale": "matches Dohare et al., who compute dead units on the current task's distribution, keeping the number comparable to the Nature paper; the reference batch is logged and reported alongside but is not the gate criterion",
+      "layer_scope": "network_pooled",
+      "layer_scope_definition": "dead units summed over all three hidden layers divided by 1500, giving one value per (seed, task)",
+      "statistic": "Spearman rank correlation between task_idx and the pooled dead_exact fraction, computed per seed over the trend window, then IQM across seeds",
+      "require_rho_positive": true,
+      "require_ci_excludes_zero": true
+    },
+    "pass_requires": ["accuracy_criterion", "dead_unit_criterion"],
+    "on_failure": {
+      "_source": "protocol §A.4",
+      "order": [
+        "raise the learning rate (Dohare's largest step size shows the strongest effect)",
+        "extend to 400 tasks",
+        "narrow to width 200"
+      ],
+      "forbidden": "weakening the criterion"
+    },
+    "dissociation_stop_rule": {
+      "_source": "protocol §A.4",
+      "condition": "accuracy_criterion passes AND dead_unit_criterion fails",
+      "action": "STOP and report. That dissociation is itself a result and changes the paper. Do not proceed to §B.1 without an explicit decision."
+    }
+  },
+
+  "primary_experiment": {
+    "_source": "protocol §B.1",
+    "name": "ReDo tau-sweep with size-matched random control",
+    "taus": [0.0, 0.01, 0.025, 0.05, 0.1, 0.25],
+    "arms": ["redo", "random_matched", "inverse_matched", "none"],
+    "recycling_frequency_steps": 1000,
+    "score_batch_size": 64,
+    "cardinality_rule": "k = |tau-dormant set|, recomputed at every event, per layer; identical across redo, random_matched and inverse_matched at a given tau, seed and event",
+    "headline_figure": "tau on the x-axis; final accuracy and the truly-dead fraction of the recycled set on twin y-axes",
+    "headline_quantities": {
+      "final_accuracy": "IQM of online_accuracy over the late window",
+      "truly_dead_fraction": "n_dead_exact / k, pooled over layers and events within a run, measured on the current-task probe batch"
+    },
+    "planned_comparisons": [
+      {"a": "redo", "b": "random_matched", "at": "each tau", "test": "paired stratified bootstrap of the IQM difference in late-window online_accuracy"},
+      {"a": "redo", "b": "none", "at": "each tau", "test": "paired stratified bootstrap of the IQM difference in late-window online_accuracy"},
+      {"a": "inverse_matched", "b": "none", "at": "each tau", "test": "paired stratified bootstrap of the IQM difference in late-window online_accuracy"}
+    ],
+    "predictions": [
+      {
+        "if": "accuracy improves with tau while the truly-dead fraction of the recycled set falls",
+        "then": "C1 confirmed: ReDo is not a resurrection method"
+      },
+      {
+        "if": "redo ≈ random_matched at large tau (by the approx_equal rule above)",
+        "then": "targeting is irrelevant; only perturbation dose matters. Strongest form of C1"
+      },
+      {
+        "if": "redo ≫ random_matched at every tau (by the much_greater rule above)",
+        "then": "C1 refuted. Targeting does matter -- report it honestly; the measurement work (C2, C3) still stands"
+      },
+      {
+        "if": "inverse_matched collapses relative to none",
+        "then": "sanity check passed, replicating Sokar et al. Fig. 15"
+      }
+    ]
+  },
+
+  "secondary_experiments": {
+    "c3_anomaly": {
+      "_source": "protocol §B.2",
+      "arms": ["backprop", "l2_1em4", "l2_1em3", "l2_1em2", "sp", "dropout01"],
+      "arms_not_yet_implemented": ["online_norm"],
+      "arms_not_yet_implemented_note": "Online Normalization (Chiley et al. 2019) is deliberately unimplemented in src/models.py rather than approximated; it must be implemented faithfully before this arm is run",
+      "target_observations": [
+        "L2 improves final accuracy WHILE increasing dead_exact and decreasing effective rank",
+        "online norm has MORE dead units than plain backprop in later tasks despite being designed to prevent them"
+      ],
+      "decomposition": "for any confirmed anomaly, decompose with C2: exactly-zero units (dead_exact) versus merely low-magnitude ones (dead_absolute at each threshold)"
+    },
+    "c5_optimizer": {
+      "_source": "protocol §B.3",
+      "arms": ["sgd", "adam_default", "adam_lyle", "adamw"],
+      "adam_default": {"eps": 1e-8, "beta2": 0.999},
+      "adam_lyle": {"eps": 1e-3, "beta2": 0.9},
+      "target_observation": "a per-neuron death spike in the first steps after each task switch, when m-hat has updated but v-hat has not (Lyle et al. Fig. 1 mechanism)",
+      "adamw_question": "does decoupled weight decay make revival of an already-dead unit more likely, giving a NON-MONOTONIC relationship between weight-decay strength and dead fraction?"
+    },
+    "eps_sweep": {
+      "_source": "protocol §B.4, demoted to a replication arm",
+      "arms": ["relu", "leaky_relu"],
+      "eps_values": [1e-4, 1e-3, 1e-2, 1e-1],
+      "purpose": "dose-response replication in continual supervised learning, filling the gap between Sokar et al. (RL, single eps) and Dohare et al. (six activations, toy regression)",
+      "status": "optional; cut if Week 2 runs long"
+    }
+  },
+
+  "metric_definitions_are_frozen_in": "src/probes.py",
+  "metric_definitions_note": [
+    "The four death definitions, effective rank, sign entropy and the Sokar",
+    "score are implemented in src/probes.py and are not restated here, so there",
+    "is exactly one definition of each. dormant_tau's blind spot to uniform",
+    "layer shrinkage is intentional and is the subject of C2; it must not be",
+    "'fixed'."
+  ],
+
+  "compute_budget": {
+    "weeks_1_2_gpu_hours": 40,
+    "planned": {"gate": 4, "tau_sweep": 13, "c3": 4, "c5": 3, "eps_sweep": 3, "buffer": 13},
+    "buffer_policy": "do not spend the buffer early; runs will be lost to bugs"
+  }
+}

@@ -53,7 +53,10 @@ def gate() -> list:
     out = []
     for lr in (0.01, 0.003, 0.001):
         for seed in range(5):
-            rid = f"gate_pmnist_w500_sgd_lr{lr:g}_s{seed}"
+            # Dots become 'p' throughout: run_ids end up as directory names,
+            # dataset slugs and filenames, and a bare '.' in those is asking for
+            # a suffix-stripping bug somewhere downstream.
+            rid = f"gate_pmnist_w500_sgd_lr{lr:g}_s{seed}".replace(".", "p")
             cfg = _base(rid, seed, lr)
             cfg["notes"] = "Week 1 reproduction gate (protocol A.4)."
             out.append(cfg)
@@ -69,7 +72,7 @@ def tau_sweep(lr: float) -> list:
     """
     out = []
     for seed in range(10):
-        rid = f"tau_none_lr{lr:g}_s{seed}"
+        rid = f"tau_none_lr{lr:g}_s{seed}".replace(".", "p")
         cfg = _base(rid, seed, lr)
         cfg["notes"] = "tau-sweep baseline, no intervention (protocol B.1)."
         out.append(cfg)
@@ -106,7 +109,7 @@ def c3_anomaly(lr: float) -> list:
             "dropout01": {"model": {"dropout": 0.1}},
         }
         for name, over in variants.items():
-            cfg = _base(f"c3_{name}_lr{lr:g}_s{seed}", seed, lr)
+            cfg = _base(f"c3_{name}_lr{lr:g}_s{seed}".replace(".", "p"), seed, lr)
             for k, v in over.items():
                 cfg.setdefault(k, {}).update(v)
             cfg["notes"] = f"C3 anomaly replication, arm {name} (protocol B.2)."
@@ -137,7 +140,7 @@ def eps_sweep(lr: float) -> list:
     """§B.4 demoted epsilon sweep: ReLU vs LeakyReLU dose-response."""
     out = []
     for seed in range(5):
-        cfg = _base(f"eps_relu_s{seed}", seed, lr)
+        cfg = _base(f"eps_relu_lr{lr:g}_s{seed}".replace(".", "p"), seed, lr)
         cfg["notes"] = "eps-sweep control, plain ReLU (protocol B.4)."
         out.append(cfg)
         for eps in (1e-4, 1e-3, 1e-2, 1e-1):
