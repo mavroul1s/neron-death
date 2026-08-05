@@ -25,7 +25,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 
 
-def _launch(config: Path, gpu: int, runs_root: str) -> subprocess.Popen:
+def _launch(config: Path, gpu: int, runs_root: str, data_root: str = "") -> subprocess.Popen:
     env = dict(os.environ)
     env["CUDA_VISIBLE_DEVICES"] = str(gpu)
     # Set before the child creates its cuBLAS handle; see config.set_determinism.
@@ -41,6 +41,8 @@ def _launch(config: Path, gpu: int, runs_root: str) -> subprocess.Popen:
         "--device",
         "cuda",  # the child sees exactly one GPU, which is always cuda:0 to it
     ]
+    if data_root:
+        cmd += ["--data-root", data_root]
     print(f"[gpu{gpu}] {config.name}", flush=True)
     return subprocess.Popen(cmd, cwd=ROOT, env=env)
 

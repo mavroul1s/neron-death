@@ -131,6 +131,22 @@ def canonical_json(cfg: dict) -> str:
     return json.dumps(cfg, sort_keys=True, separators=(",", ":"), default=str)
 
 
+#: Config entries that describe *where the bytes live*, not what the experiment
+#: is. Excluded from the hash so that the same run is recognisably the same run
+#: whether it is executing on Kaggle (`/kaggle/input/<slug>/...`) or locally
+#: (`data/`). Without this, moving a run between machines makes it un-resumable
+#: and makes the ledger show two different hashes for one experiment.
+_ENVIRONMENTAL_KEYS = (("data", "root"),)
+
+
+def hashable_config(cfg: dict) -> dict:
+    """The resolved config with environmental paths stripped."""
+    out = copy.deepcopy(cfg)
+    for section, key in _ENVIRONMENTAL_KEYS:
+        out.get(section, {}).pop(key, None)
+    return out
+
+
 def config_hash(cfg: dict) -> str:
     """SHA-256 of the *resolved* config, first 16 hex chars.
 
@@ -138,8 +154,15 @@ def config_hash(cfg: dict) -> str:
     still pinned by the hash. Consequence, stated so it is never a surprise:
     changing a default changes every hash. That is the correct behaviour --
     those runs really were run under different settings.
+
+    ``data.root`` is deliberately excluded (see `_ENVIRONMENTAL_KEYS`); the path
+    a dataset happens to be mounted at is not a property of the experiment. The
+    full config, paths included, is still written to `config.json` beside the
+    outputs, so nothing is lost.
     """
-    return hashlib.sha256(canonical_json(cfg).encode("utf-8")).hexdigest()[:16]
+    return hashlib.sha256(
+        canonical_json(hashable_config(cfg)).encode("utf-8")
+    ).hexdigest()[:16]
 
 
 def save_config(cfg: dict, path) -> None:

@@ -524,9 +524,16 @@ class Trainer:
             )
 
 
-def run_config(config_path, runs_root="runs", device=None, resume=True) -> Path:
+def run_config(
+    config_path, runs_root="runs", device=None, resume=True, data_root=None
+) -> Path:
     """Entry point. This is the single function a Kaggle notebook calls."""
     cfg = load_config(config_path)
+    if data_root:
+        # Where the dataset is mounted is environmental, not experimental: it is
+        # excluded from the config hash, so overriding it does not make this a
+        # different run (see config._ENVIRONMENTAL_KEYS).
+        cfg["data"]["root"] = data_root
     return Trainer(cfg, runs_root=runs_root, device=device).run(resume=resume)
 
 
@@ -535,6 +542,12 @@ def main(argv=None) -> int:
     ap.add_argument("--config", required=True, help="path to a run config JSON")
     ap.add_argument("--runs-root", default="runs")
     ap.add_argument("--device", default=None, help="override config device")
+    ap.add_argument(
+        "--data-root",
+        default=os.environ.get("NEURON_DEATH_DATA") or None,
+        help="override data.root (defaults to $NEURON_DEATH_DATA); the mount "
+        "path is environmental and is not part of the config hash",
+    )
     ap.add_argument("--no-resume", action="store_true")
     args = ap.parse_args(argv)
 
@@ -544,6 +557,7 @@ def main(argv=None) -> int:
         runs_root=args.runs_root,
         device=args.device,
         resume=not args.no_resume,
+        data_root=args.data_root,
     )
     print(f"{run_dir}  ({time.perf_counter() - t0:.1f}s)")
     return 0
