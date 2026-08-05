@@ -1,0 +1,26 @@
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "neuron-death"
+version = "0.1.0"
+description = "Dead and dormant neurons in continual learning: measurement, not method."
+requires-python = ">=3.10"
+dependencies = [
+    "torch",
+    "numpy",
+    "pandas",
+    "pyarrow",
+    "scipy",
+]
+
+[project.optional-dependencies]
+dev = ["pytest"]
+
+[tool.setuptools]
+packages = ["src", "src.analysis"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q"

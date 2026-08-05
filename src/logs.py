@@ -148,13 +148,17 @@ class ShardedParquetLog:
         self._min_task = self._max_task = None
         return path
 
-    def _shards(self) -> List[Path]:
-        return sorted(self.shard_dir.glob(f"{self.name}.part_*.parquet"))
-
     @staticmethod
     def _shard_range(path: Path) -> tuple:
         lo, hi = path.stem.split(".part_")[1].split("_")
         return int(lo), int(hi)
+
+    def _shards(self) -> List[Path]:
+        # Sorted by parsed task range, not by filename: the init probe's shard
+        # starts at task -1, and "-00001" sorts *after* "+00000" as a string.
+        return sorted(
+            self.shard_dir.glob(f"{self.name}.part_*.parquet"), key=self._shard_range
+        )
 
     def rewind_to(self, last_task: int) -> List[Path]:
         """Delete shards containing tasks after `last_task` (resume path)."""
