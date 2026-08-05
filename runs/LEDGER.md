@@ -6,9 +6,23 @@ run's `summary.json` is the source of truth. Free-text notes go under
 
 | run_id | config hash | date | status | GPU-hours | device | tasks | notes |
 |---|---|---|---|---:|---|---:|---|
-| _(no runs yet)_ | | | | | | | |
+| `gate_pmnist_w500_sgd_lr0p001_s0` | `a6d8fa9141bde420` | 2026-08-05 | complete | 0.24 | cuda | 200 | Week 1 reproduction gate (protocol A.4). |
+| `gate_pmnist_w500_sgd_lr0p001_s1` | `82b9b8918148a94f` | 2026-08-05 | complete | 0.23 | cuda | 200 | Week 1 reproduction gate (protocol A.4). |
+| `gate_pmnist_w500_sgd_lr0p001_s2` | `4d813c4f065d32b3` | 2026-08-05 | complete | 0.23 | cuda | 200 | Week 1 reproduction gate (protocol A.4). |
+| `gate_pmnist_w500_sgd_lr0p001_s3` | `bbcfe329c8aad841` | 2026-08-05 | complete | 0.23 | cuda | 200 | Week 1 reproduction gate (protocol A.4). |
+| `gate_pmnist_w500_sgd_lr0p001_s4` | `44cb9422a828d622` | 2026-08-05 | complete | 0.24 | cuda | 200 | Week 1 reproduction gate (protocol A.4). |
+| `gate_pmnist_w500_sgd_lr0p003_s0` | `32fb0a971b541269` | 2026-08-05 | complete | 0.23 | cuda | 200 | Week 1 reproduction gate (protocol A.4). |
+| `gate_pmnist_w500_sgd_lr0p003_s1` | `e61d8b337b859e44` | 2026-08-05 | complete | 0.23 | cuda | 200 | Week 1 reproduction gate (protocol A.4). |
+| `gate_pmnist_w500_sgd_lr0p003_s2` | `39962b43a441939e` | 2026-08-05 | complete | 0.23 | cuda | 200 | Week 1 reproduction gate (protocol A.4). |
+| `gate_pmnist_w500_sgd_lr0p003_s3` | `d2dc73cd56d0cf07` | 2026-08-05 | complete | 0.23 | cuda | 200 | Week 1 reproduction gate (protocol A.4). |
+| `gate_pmnist_w500_sgd_lr0p003_s4` | `e817d294776ce8dd` | 2026-08-05 | complete | 0.23 | cuda | 200 | Week 1 reproduction gate (protocol A.4). |
+| `gate_pmnist_w500_sgd_lr0p01_s0` | `006f377265d82123` | 2026-08-05 | complete | 0.22 | cuda | 200 | Week 1 reproduction gate (protocol A.4). |
+| `gate_pmnist_w500_sgd_lr0p01_s1` | `cdb44a195714f675` | 2026-08-05 | complete | 0.22 | cuda | 200 | Week 1 reproduction gate (protocol A.4). |
+| `gate_pmnist_w500_sgd_lr0p01_s2` | `10e23366591ebfbe` | 2026-08-05 | complete | 0.22 | cuda | 200 | Week 1 reproduction gate (protocol A.4). |
+| `gate_pmnist_w500_sgd_lr0p01_s3` | `d37baef401e1adcb` | 2026-08-05 | complete | 0.23 | cuda | 200 | Week 1 reproduction gate (protocol A.4). |
+| `gate_pmnist_w500_sgd_lr0p01_s4` | `b43463d78c1246b7` | 2026-08-05 | complete | 0.22 | cuda | 200 | Week 1 reproduction gate (protocol A.4). |
 
-**Total: 0 runs, 0.00 GPU-hours.**
+**Total: 15 runs, 3.43 GPU-hours.**
 
 ## Session notes
 

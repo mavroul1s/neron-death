@@ -63,6 +63,76 @@ def gate() -> list:
     return out
 
 
+def gate_raised_lr() -> list:
+    """§A.4 failure response, step 1: 'raise the learning rate first (Dohare's
+    largest step size shows the strongest effect)'.
+
+    Why these values. The first gate (lr 0.001/0.003/0.01, 5 seeds, run
+    2026-08-05) failed the >=3 pp criterion at every rate, but the drop moved
+    monotonically with the step size -- -1.18 pp at 0.001, -0.25 pp at 0.003,
+    +1.30 pp at 0.01 -- so the phenomenon is present and under-driven, not
+    absent. These extend the ladder by two half-decades in the same direction.
+
+    NOTE for whoever reads the results: the optimizer keeps momentum 0.9 per
+    protocol §A.4, so the effective step is roughly 10x the nominal lr. lr=0.1
+    with momentum may be unstable. A diverged run is itself an answer and gets
+    reported as one -- it must not be quietly dropped from the sweep.
+
+    New run_ids; the original gate configs are untouched (CLAUDE.md §7).
+    """
+    out = []
+    for lr in (0.03, 0.1):
+        for seed in range(5):
+            rid = f"gatehi_pmnist_w500_sgd_lr{lr:g}_s{seed}".replace(".", "p")
+            cfg = _base(rid, seed, lr)
+            cfg["notes"] = (
+                "Week 1 gate, raised learning rate "
+                "(protocol A.4 failure response step 1)."
+            )
+            out.append(cfg)
+    return out
+
+
+def gate_long() -> list:
+    """§A.4 failure response, step 2: 'extend to 400 tasks'.
+
+    Only run this if step 1 (gate_hi) also fails; the pre-specified order is not
+    optional. At ~4.2 s/task these are ~28 min per run, so 10 runs is ~4.7
+    GPU-hours -- the most expensive of the three responses, which is why it is
+    second rather than first.
+    """
+    out = []
+    for lr in (0.01, 0.03):
+        for seed in range(5):
+            rid = f"gatelong_pmnist_w500_sgd_lr{lr:g}_s{seed}".replace(".", "p")
+            cfg = _base(rid, seed, lr, n_tasks=400)
+            cfg["notes"] = (
+                "Week 1 gate, 400 tasks (protocol A.4 failure response step 2)."
+            )
+            out.append(cfg)
+    return out
+
+
+def gate_narrow() -> list:
+    """§A.4 failure response, step 3: 'narrow to width 200'.
+
+    Dohare et al. report plasticity loss is most pronounced at smaller widths
+    (their Fig. 2b, middle panel), which is the same reasoning that put us at
+    500 rather than 2000 in the first place.
+    """
+    out = []
+    for lr in (0.01, 0.03):
+        for seed in range(5):
+            rid = f"gatenarrow_pmnist_w200_sgd_lr{lr:g}_s{seed}".replace(".", "p")
+            cfg = _base(rid, seed, lr)
+            cfg["model"]["hidden_dims"] = [200, 200, 200]
+            cfg["notes"] = (
+                "Week 1 gate, width 200 (protocol A.4 failure response step 3)."
+            )
+            out.append(cfg)
+    return out
+
+
 def tau_sweep(lr: float) -> list:
     """§B.1 primary experiment: 4 arms x 6 taus x 10 seeds.
 
@@ -155,6 +225,10 @@ def eps_sweep(lr: float) -> list:
 
 EXPERIMENTS = {
     "gate": lambda lr: gate(),
+    # Protocol §A.4 failure responses, in the order they must be tried.
+    "gate_hi": lambda lr: gate_raised_lr(),
+    "gate_long": lambda lr: gate_long(),
+    "gate_narrow": lambda lr: gate_narrow(),
     "tau_sweep": tau_sweep,
     "c3": c3_anomaly,
     "c5": c5_optimizer,
