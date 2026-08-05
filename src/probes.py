@@ -371,11 +371,18 @@ def probe_layer(
     layer_idx: int,
     cfg: ProbeConfig,
     extremes: Optional[Sequence[float]] = None,
+    compute_erank: bool = True,
 ) -> LayerProbe:
     """Compute every death metric for one layer from one probe batch.
 
     All four death definitions are computed from the *same* activation tensor in
     a single pass -- that simultaneity is the C2 measurement (CLAUDE.md §5.1).
+
+    ``compute_erank=False`` skips only the SVD and records ``erank=nan``. It is
+    used at recycling events, which need the death metrics for the composition
+    table but not the effective rank; the SVD is by far the most expensive part
+    of a probe and running it ~100 extra times per run buys nothing. Task-
+    boundary probes always compute it.
     """
     if pre.shape != post.shape:
         raise ValueError(f"pre {tuple(pre.shape)} and post {tuple(post.shape)} differ")
@@ -399,7 +406,7 @@ def probe_layer(
         # correction=0 (population std): deterministic and independent of N.
         preact_std=pre64.std(dim=0, correction=0).cpu().numpy(),
         saturated=None if sat is None else sat.cpu().numpy(),
-        erank=effective_rank(post),
+        erank=effective_rank(post) if compute_erank else float("nan"),
         sign_entropy=sign_entropy(pre),
         taus=cfg.taus,
         abs_thresholds=cfg.abs_thresholds,
@@ -407,24 +414,48 @@ def probe_layer(
 
 
 @torch.no_grad()
-def probe_model(
+def probe_model_and_logits(
     model,
     x: torch.Tensor,
     cfg: ProbeConfig,
-) -> List[LayerProbe]:
+    compute_erank: bool = True,
+) -> Tuple[List[LayerProbe], torch.Tensor]:
     """Run the probe batch through the model and measure every hidden layer.
 
     The caller is responsible for ``model.eval()``. Probing in eval mode is
     deliberate: dropout and batch-norm training behaviour would make the
     activation statistics a property of the sampling noise rather than of the
     network.
+
+    Logits are returned as well so that held-out probe accuracy comes from the
+    same forward pass as the activation statistics -- one pass, one network
+    state, no possibility of the two disagreeing.
     """
-    _, pres, posts = model.forward_with_activations(x)
+    logits, pres, posts = model.forward_with_activations(x)
     extremes = getattr(model, "activation_extremes", None)
-    return [
-        probe_layer(pre, post, i, cfg, extremes)
+    layers = [
+        probe_layer(pre, post, i, cfg, extremes, compute_erank=compute_erank)
         for i, (pre, post) in enumerate(zip(pres, posts))
     ]
+    return layers, logits
+
+
+def probe_model(
+    model,
+    x: torch.Tensor,
+    cfg: ProbeConfig,
+    compute_erank: bool = True,
+) -> List[LayerProbe]:
+    """As `probe_model_and_logits`, discarding the logits."""
+    return probe_model_and_logits(model, x, cfg, compute_erank)[0]
+
+
+def accuracy(logits: torch.Tensor, targets: torch.Tensor) -> float:
+    """Top-1 accuracy as a fraction. Ties in the argmax break toward the lowest
+    class index, which is torch's behaviour and is not worth overriding."""
+    if logits.shape[0] == 0:
+        return float("nan")
+    return float((logits.argmax(dim=1) == targets).to(torch.float64).mean())
 
 
 # ---------------------------------------------------------------------------
