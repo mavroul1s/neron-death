@@ -10,6 +10,9 @@ runs/*
 # Kaggle Dataset. Never committed.
 data/
 
+# Kaggle upload bundles, rebuilt on demand by scripts/package_for_kaggle.py
+dist/
+
 __pycache__/
 *.py[cod]
 .pytest_cache/
