@@ -1,2 +1,20 @@
 /CLAUDE.md
 /protocol_weeks_1_2_v2.md
+
+# Run outputs. Results live in a versioned Kaggle Dataset, not in git
+# (CLAUDE.md §3). runs/LEDGER.md is the exception -- it is the compute appendix.
+runs/*
+!runs/LEDGER.md
+
+# Cached datasets, built once by scripts/prepare_data.py and uploaded as a
+# Kaggle Dataset. Never committed.
+data/
+
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ipynb_checkpoints/
+*.egg-info/
+.venv/
+venv/
