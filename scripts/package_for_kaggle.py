@@ -24,6 +24,7 @@ import zipfile
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 EXCLUDE_DIRS = {
     "__pycache__",
@@ -157,6 +158,14 @@ def main(argv=None) -> int:
         print(f"WARNING: {len(files)} files exceeds Kaggle's 1000-file limit")
 
     folder = _write_upload_folder(out, Path(args.notebook))
+
+    # One ready-to-run notebook per independent job, so parallel sessions never
+    # need an edit (and never accidentally re-run the same sweep).
+    import make_kaggle_notebooks  # noqa: E402  -- same directory
+
+    print()
+    make_kaggle_notebooks.main(["--out", str(folder)])
+
     print(f"\nUpload folder ready: {folder}")
     for p in sorted(folder.iterdir()):
         print(f"  {p.name:38s} {p.stat().st_size/1e6:7.2f} MB")
