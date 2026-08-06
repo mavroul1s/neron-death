@@ -112,12 +112,15 @@ JOBS = [
         "is_gate": False,
         "runs": 15,
         "hours": None,  # unmeasured; conv cost is not the MLP cost
+        "data": "cifar",
         "why": (
             "C1 + C2 with a CONV net on label-shuffled CIFAR-10, where the unit "
-            "is a channel. BLOCKED until cifar10.npz is built and packaged: run "
-            "`python scripts/prepare_data.py --dataset cifar10 --root data`. "
-            "Per-run cost is unmeasured -- read the smoke-test cell's time and "
-            "multiply before letting the sweep run."
+            "is a channel. Attach any public Kaggle CIFAR-10 (python) dataset as "
+            "a second Input -- src/data.py reads cifar10.npz, an extracted "
+            "cifar-10-batches-py/ folder, or cifar-10-python.tar.gz, so you do "
+            "not need to build or upload anything. Per-run cost is unmeasured "
+            "(a conv net is not an MLP): read the smoke-test cell's printed time "
+            "and multiply by 15 before letting the sweep run."
         ),
     },
 ]
@@ -139,6 +142,18 @@ def build(job: dict, template: dict) -> dict:
     nb = json.loads(json.dumps(template))  # deep copy
 
     globs = ", ".join(f'"{g}"' for g in job["globs"])
+    if job.get("data") == "cifar":
+        data_line = (
+            'DATA = DATA_CIFAR\n'
+            'assert DATA, (\n'
+            '    "CIFAR-10 is not attached. Add any public Kaggle CIFAR-10 (python) "\n'
+            '    "dataset as an Input -- src/data.py reads cifar10.npz, an extracted "\n'
+            '    "cifar-10-batches-py/ folder, or cifar-10-python.tar.gz."\n'
+            ')'
+        )
+    else:
+        data_line = 'DATA = DATA_MNIST\nassert DATA, "MNIST not found in the code dataset"'
+
     _find_cell(nb, "EXPERIMENT =")["source"] = _as_source(
         f'''from src.config import load_config
 from src.train import Trainer
@@ -149,6 +164,7 @@ CONFIG_GLOBS = [{globs}]
 RUN_PATTERN = "{job['pattern']}"
 IS_GATE = {job['is_gate']}
 EXPECTED_RUNS = {job['runs']}
+{data_line}
 # ---------------------------------------------------------------------------
 
 configs = sorted(

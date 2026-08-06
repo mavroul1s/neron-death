@@ -108,11 +108,14 @@ PRE-FLIGHT CHECK (built in)
     step 1 rather than letting the sweep run.
 
 
-KNOWN BLOCKER
-    7_setting2_cifar_cnn needs CIFAR-10, which is not in the dataset yet:
-        python scripts/prepare_data.py --dataset cifar10 --root data
-        python scripts/package_for_kaggle.py      (re-bundles it)
-    Its per-run cost is also unmeasured -- a conv net is not an MLP. Read the
+7_setting2_cifar_cnn NEEDS A SECOND DATASET
+    It runs on CIFAR-10. Do NOT download or upload it -- search Kaggle for
+    "CIFAR-10 python" and attach any public one as a second Input. src/data.py
+    reads all three layouts these come in:
+        cifar10.npz  |  cifar-10-batches-py/  |  cifar-10-python.tar.gz
+    The notebook finds whichever is mounted and asserts if none is.
+
+    Its per-run cost is unmeasured -- a conv net is not an MLP. Read the
     smoke-test cell's printed time and multiply by 15 before running the sweep.
 
 
