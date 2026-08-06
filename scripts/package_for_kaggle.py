@@ -38,9 +38,18 @@ EXCLUDE_DIRS = {
     "data",
 }
 EXCLUDE_SUFFIXES = {".pyc", ".pyo", ".zip", ".parquet", ".pt"}
-# The ledger is the compute appendix and is small; keep it even though runs/ is
-# otherwise excluded.
-FORCE_INCLUDE = {Path("runs/LEDGER.md")}
+
+#: Kept despite their directories being excluded.
+#:
+#: `runs/LEDGER.md` is the compute appendix and is a few KB.
+#:
+#: `data/mnist.npz` is 11 MB and never changes, so bundling it costs almost
+#: nothing and removes a standing failure mode: the notebook locates MNIST by
+#: searching for `mnist.npz` under /kaggle/input, and with it in here the run
+#: works whether or not a separate data Dataset happens to be attached. The raw
+#: idx-ubyte files stay excluded -- they are the same bytes again, and they are
+#: what pushed the upload past Kaggle's 1000-file limit.
+FORCE_INCLUDE = {Path("runs/LEDGER.md"), Path("data/mnist.npz")}
 
 
 def _wanted(path: Path) -> bool:
