@@ -30,6 +30,7 @@ import argparse
 import json
 import sys
 import zipfile
+from typing import Optional
 from pathlib import Path
 
 import pyarrow as pa
