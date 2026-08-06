@@ -92,3 +92,34 @@ statistics. Cheapest partial order:
 - `+ inverse_matched` × 6 τ = 60 runs, ~13 GPU-h — a sanity check replicating
   Sokar Fig. 15; arguably needs 1–2 τ values, not 6. Trimming it is a scope
   deviation and belongs in `configs/DEVIATIONS.md` if taken.
+
+### 2026-08-06 — Kaggle session 4: second accidental re-run of gate_hi
+
+The same 10 `gatehi_*` configs again, on a different Kaggle account, 2.00 GPU-h.
+Cause: the shipped notebook had `EXPERIMENT = "gate_hi"` hardcoded, so a fresh
+session with no edit re-runs the gate. Fixed by generating one pre-filled
+notebook per job (`scripts/make_kaggle_notebooks.py`) plus a config-count
+assertion that stops the run if the attached Dataset is stale.
+
+No new experimental data, but two things worth keeping:
+
+1. **Third determinism confirmation, now across accounts and machines.** All 10
+   runs reproduced bit-identically (`online_accuracy` equal at `atol=0`).
+2. **Config hashes changed while behaviour did not.** The same experiment now
+   hashes to `4a4d9b0c…` where the 2026-08-05 session recorded `2c82869f…`,
+   because four keys were added to `DEFAULT_CONFIG` since: `data.flatten`,
+   `model.architecture`, `probe.intra_task_probe_every`,
+   `probe.intra_task_probe_reference`. All four are no-ops for Setting 1
+   (`architecture='mlp'` is the prior behaviour, `flatten` is CIFAR-only,
+   `intra_task_probe_every=None` disables). No existing key changed value.
+
+   This is the documented consequence of hashing the *resolved* config, and the
+   bit-identical results are the evidence that the conv and intra-task work did
+   not perturb Setting 1. But it does mean **the ledger carries two hashes for
+   one experiment**, and older runs can no longer be resumed by the current
+   code (`assert_config_unchanged` compares stored vs current resolved hashes).
+   Completed runs are unaffected. Worth stating in the compute appendix rather
+   than leaving a reader to notice it.
+
+These 2.00 GPU-h are excluded from the weeks 1–2 budget as duplicates; the total
+stands at 5.53 / 40.
