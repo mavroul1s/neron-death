@@ -26,5 +26,28 @@ run's `summary.json` is the source of truth. Free-text notes go under
 
 ## Session notes
 
-_Add per-session commentary here; the generator preserves everything below this
-heading._
+### 2026-08-05 — Kaggle session 1: the reproduction gate
+
+15 runs (lr ∈ {0.001, 0.003, 0.01} × 5 seeds), 3.43 GPU-h, 0 failures.
+**Gate FAILED** on the accuracy criterion at every learning rate; the dead-unit
+criterion passed at every learning rate. See `CLAUDE.md` §11 for the table and
+the two early findings (C2 confirmed; C1 prior).
+
+### 2026-08-05 — Kaggle session 2: accidental re-run, and a determinism result
+
+The same 15 `gate_*` configs were executed a second time. The intended
+`configs/gate_hi/` sweep did **not** run: the session used the previous code
+Dataset (which predates `gate_hi`) and the pre-update notebook, so the config
+glob resolved to `configs/gate/*.json` again.
+
+No new experimental data. It did, however, produce a result worth keeping:
+**all 15 runs reproduced bit-identically** across a fresh session and a
+different GPU allocation — every `online_accuracy` equal at `atol=0`, despite
+wall-clock differing (3.18 vs 3.43 GPU-h). The determinism machinery required by
+CLAUDE.md §7 is therefore demonstrated on real runs, not only in unit tests.
+These 3.18 GPU-h are **not** counted against the weeks 1–2 budget, since they
+duplicate runs already banked.
+
+Operational cause and fix: the code Dataset must be rebuilt with
+`python scripts/package_for_kaggle.py` after any config change, and the notebook
+must be taken from `notebooks/` rather than from a previous session's copy.
