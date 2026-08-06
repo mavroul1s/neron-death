@@ -345,9 +345,270 @@ class MLP(nn.Module):
         }
 
 
-def build_model(cfg: dict, generator: Optional[torch.Generator] = None) -> MLP:
-    """Construct an MLP from the ``model`` block of a run config."""
+class SmallCNN(nn.Module):
+    """Small conv net for Setting 2 (label-shuffled CIFAR-10, CLAUDE.md §9).
+
+    ``3x[conv -> norm -> act -> 2x2 maxpool] -> flatten -> fc -> fc``.
+
+    Chosen because it varies three things at once relative to Setting 1 --
+    dataset, architecture, and *kind* of non-stationarity -- and because the
+    unit becomes a channel, which is what makes it a C2 extension rather than a
+    repeat.
+
+    Exposes the same contract as `MLP` (``forward_with_activations``,
+    ``incoming_module`` / ``outgoing_module``, ``init_specs``) so probes.py and
+    interventions.py need no architecture-specific branches. The one genuinely
+    new thing is `flatten_spatial`: the number of spatial positions each channel
+    of the last conv layer contributes to the first fully-connected layer, which
+    is what turns a channel index into a slice of that layer's columns.
+    """
+
+    def __init__(
+        self,
+        in_channels: int = 3,
+        image_size: int = 32,
+        channels: Sequence[int] = (32, 64, 64),
+        fc_dims: Sequence[int] = (128,),
+        out_features: int = 10,
+        kernel_size: int = 3,
+        activation: str = "relu",
+        activation_param: float = 0.01,
+        norm: str = "none",
+        dropout: float = 0.0,
+        init: str = "kaiming_uniform",
+        bias_init: float = 0.0,
+        generator: Optional[torch.Generator] = None,
+    ):
+        super().__init__()
+        if init not in ("kaiming_uniform", "kaiming_normal"):
+            raise ValueError(f"unknown init {init!r}")
+
+        self.in_channels = int(in_channels)
+        self.image_size = int(image_size)
+        self.channels = tuple(int(c) for c in channels)
+        self.fc_dims = tuple(int(d) for d in fc_dims)
+        self.out_features = int(out_features)
+        self.activation_name = activation
+        self.activation_param = float(activation_param)
+        self.norm_name = norm
+        self.dropout_p = float(dropout)
+        self.init_kind = init
+        self.bias_init = float(bias_init)
+
+        pad = kernel_size // 2
+        conv_in = [self.in_channels, *self.channels[:-1]]
+        self.convs = nn.ModuleList(
+            [
+                nn.Conv2d(i, o, kernel_size, padding=pad)
+                for i, o in zip(conv_in, self.channels)
+            ]
+        )
+        self.conv_norms = nn.ModuleList(
+            [
+                nn.Identity() if norm in ("none", None) else make_norm(norm, c)
+                if norm == "batch"
+                else nn.GroupNorm(1, c)
+                for c in self.channels
+            ]
+        )
+        self.pool = nn.MaxPool2d(2)
+
+        side = self.image_size
+        for _ in self.channels:
+            side //= 2
+        if side < 1:
+            raise ValueError(
+                f"image_size {image_size} too small for {len(self.channels)} pools"
+            )
+        #: Spatial positions per channel entering the first fully-connected
+        #: layer. Channel c owns flattened columns [c*spatial, (c+1)*spatial).
+        self.flatten_spatial = side * side
+        self.spatial_side = side
+
+        fc_in = [self.channels[-1] * self.flatten_spatial, *self.fc_dims]
+        fc_out = [*self.fc_dims, self.out_features]
+        self.fcs = nn.ModuleList(
+            [nn.Linear(i, o) for i, o in zip(fc_in, fc_out)]
+        )
+        self.fc_norms = nn.ModuleList(
+            [nn.Identity() if norm in ("none", None) else make_norm(norm, d)
+             for d in self.fc_dims]
+        )
+
+        self.act = make_activation(activation, self.activation_param)
+        self.dropout = nn.Dropout(self.dropout_p) if self.dropout_p > 0 else nn.Identity()
+
+        gain = _init_gain(activation, self.activation_param)
+        self.init_specs: List[InitSpec] = []
+        for conv, cin in zip(self.convs, conv_in):
+            fan_in = cin * kernel_size * kernel_size
+            self.init_specs.append(
+                InitSpec(init, gain, fan_in, bias_value=self.bias_init)
+            )
+        for i in fc_in:
+            self.init_specs.append(InitSpec(init, gain, i, bias_value=self.bias_init))
+
+        self.reset_parameters(generator)
+
+    # -- construction ---------------------------------------------------------
+
+    @property
+    def _modules_in_order(self) -> List[nn.Module]:
+        """Every weight-bearing module, in forward order."""
+        return [*self.convs, *self.fcs]
+
+    def reset_parameters(self, generator: Optional[torch.Generator] = None) -> None:
+        with torch.no_grad():
+            for mod, spec in zip(self._modules_in_order, self.init_specs):
+                w = spec.sample(tuple(mod.weight.shape), generator)
+                mod.weight.copy_(w.to(mod.weight.device))
+                if mod.bias is not None:
+                    mod.bias.fill_(spec.bias_value)
+
+    # -- structure ------------------------------------------------------------
+
+    @property
+    def n_hidden(self) -> int:
+        return len(self.channels) + len(self.fc_dims)
+
+    @property
+    def hidden_dims(self) -> Tuple[int, ...]:
+        return (*self.channels, *self.fc_dims)
+
+    @property
+    def n_conv(self) -> int:
+        return len(self.channels)
+
+    def _check_hidden(self, layer_idx: int) -> None:
+        if not 0 <= layer_idx < self.n_hidden:
+            raise IndexError(
+                f"hidden layer {layer_idx} out of range (0..{self.n_hidden - 1})"
+            )
+
+    def incoming_module(self, layer_idx: int) -> nn.Module:
+        self._check_hidden(layer_idx)
+        return self._modules_in_order[layer_idx]
+
+    def outgoing_module(self, layer_idx: int) -> nn.Module:
+        """The module consuming hidden layer i. For the last conv layer this is
+        a Linear that sees the *flattened* feature map."""
+        self._check_hidden(layer_idx)
+        return self._modules_in_order[layer_idx + 1]
+
+    def outgoing_spatial(self, layer_idx: int) -> int:
+        """Spatial positions each unit of layer i contributes to the next
+        module's input. 1 everywhere except the conv->flatten->Linear boundary.
+        """
+        self._check_hidden(layer_idx)
+        return self.flatten_spatial if layer_idx == self.n_conv - 1 else 1
+
+    # Aliases so MLP and SmallCNN are interchangeable to callers.
+    incoming_linear = incoming_module
+    outgoing_linear = outgoing_module
+
+    @property
+    def linears(self) -> List[nn.Module]:
+        """All weight-bearing modules, for the gradient tracker."""
+        return self._modules_in_order
+
+    @property
+    def activation_extremes(self) -> Optional[Tuple[float, ...]]:
+        return ACTIVATION_EXTREMES[self.activation_name]
+
+    def n_parameters(self) -> int:
+        return sum(p.numel() for p in self.parameters())
+
+    # -- forward --------------------------------------------------------------
+
+    def forward_with_activations(
+        self, x: torch.Tensor
+    ) -> Tuple[torch.Tensor, List[torch.Tensor], List[torch.Tensor]]:
+        pres: List[torch.Tensor] = []
+        posts: List[torch.Tensor] = []
+        h = x
+        for conv, nrm in zip(self.convs, self.conv_norms):
+            z = nrm(conv(h))
+            pres.append(z)
+            a = self.act(z)
+            posts.append(a)
+            h = self.pool(self.dropout(a))
+        h = h.reshape(h.shape[0], -1)  # channel-major; see flatten_spatial
+        for fc, nrm in zip(self.fcs[:-1], self.fc_norms):
+            z = nrm(fc(h))
+            pres.append(z)
+            a = self.act(z)
+            posts.append(a)
+            h = self.dropout(a)
+        return self.fcs[-1](h), pres, posts
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        return self.forward_with_activations(x)[0]
+
+    # -- recycling support ----------------------------------------------------
+
+    def sample_incoming_weights(
+        self, layer_idx: int, k: int, generator: Optional[torch.Generator] = None
+    ) -> torch.Tensor:
+        """Fresh incoming weights for k units of layer `layer_idx`.
+
+        For a conv layer a "unit" owns a whole filter bank, so the returned
+        shape is (k, C_in, kH, kW) rather than (k, fan_in).
+        """
+        self._check_hidden(layer_idx)
+        spec = self.init_specs[layer_idx]
+        shape = (k,) + tuple(self.incoming_module(layer_idx).weight.shape[1:])
+        return spec.sample(shape, generator)
+
+    def init_bias_value(self, layer_idx: int) -> float:
+        self._check_hidden(layer_idx)
+        return self.init_specs[layer_idx].bias_value
+
+    # -- serialisation --------------------------------------------------------
+
+    def describe(self) -> dict:
+        return {
+            "architecture": "SmallCNN",
+            "in_channels": self.in_channels,
+            "image_size": self.image_size,
+            "channels": list(self.channels),
+            "fc_dims": list(self.fc_dims),
+            "out_features": self.out_features,
+            "activation": self.activation_name,
+            "norm": self.norm_name,
+            "dropout": self.dropout_p,
+            "init": self.init_kind,
+            "flatten_spatial": self.flatten_spatial,
+            "n_parameters": self.n_parameters(),
+            "init_specs": [s.to_dict() for s in self.init_specs],
+        }
+
+
+def build_model(cfg: dict, generator: Optional[torch.Generator] = None):
+    """Construct the model from the ``model`` block of a run config.
+
+    ``architecture`` selects between Setting 1's MLP (default) and Setting 2's
+    SmallCNN.
+    """
     cfg = dict(cfg or {})
+    arch = cfg.get("architecture", "mlp")
+    if arch == "cnn":
+        return SmallCNN(
+            in_channels=cfg.get("in_channels", 3),
+            image_size=cfg.get("image_size", 32),
+            channels=cfg.get("channels", (32, 64, 64)),
+            fc_dims=cfg.get("fc_dims", (128,)),
+            out_features=cfg.get("out_features", 10),
+            kernel_size=cfg.get("kernel_size", 3),
+            activation=cfg.get("activation", "relu"),
+            activation_param=cfg.get("activation_param", 0.01),
+            norm=cfg.get("norm", "none"),
+            dropout=cfg.get("dropout", 0.0),
+            init=cfg.get("init", "kaiming_uniform"),
+            bias_init=cfg.get("bias_init", 0.0),
+            generator=generator,
+        )
+    if arch != "mlp":
+        raise ValueError(f"unknown architecture {arch!r}; known: mlp, cnn")
     return MLP(
         in_features=cfg.get("in_features", 784),
         hidden_dims=cfg.get("hidden_dims", (500, 500, 500)),

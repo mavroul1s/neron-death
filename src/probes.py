@@ -155,6 +155,35 @@ def _f64(t: torch.Tensor) -> torch.Tensor:
     return t.detach().to(torch.float64)
 
 
+def as_unit_matrix(h: torch.Tensor) -> torch.Tensor:
+    """Fold an activation tensor to (rows, units), where a unit is one neuron.
+
+    * ``(N, U)`` -- a fully-connected layer -- is returned unchanged.
+    * ``(N, C, H, W)`` -- a conv layer -- becomes ``(N*H*W, C)``.
+
+    In a conv layer the unit is the **channel** and its activation is a feature
+    map, so "dead" must mean zero across all inputs *and* all spatial positions
+    (CLAUDE.md §5.5). Folding the spatial axes into the row axis makes every
+    metric in this module operate on channels with no second implementation.
+
+    That is the point, not an optimisation: a separate conv code path would be a
+    second place for each of the four death definitions to drift, and C2 is
+    entirely an argument about definitions. Sokar et al. specify the spatial
+    mean for conv layers, and the layer-mean normalisation in `sokar_scores`
+    then divides by the mean over channels (H^l = C), which is what they ask for.
+    """
+    h = h.detach()
+    if h.dim() == 2:
+        return h
+    if h.dim() == 4:
+        # (N, C, H, W) -> (N, H, W, C) -> (N*H*W, C). The permute is what makes
+        # the channel the column; reshaping without it would interleave units.
+        return h.permute(0, 2, 3, 1).reshape(-1, h.shape[1])
+    raise ValueError(
+        f"expected (N, U) or (N, C, H, W) activations, got {tuple(h.shape)}"
+    )
+
+
 def mean_abs_activation(post: torch.Tensor) -> torch.Tensor:
     """E_x |h_i(x)| per neuron. Shape (N, H) -> (H,), float64.
 
@@ -355,7 +384,25 @@ class LayerProbe:
     taus: Tuple[float, ...]
     abs_thresholds: Tuple[float, ...]
 
+    #: True for a conv layer, where the unit is a channel and `n_inputs` counts
+    #: (example, row, column) positions rather than examples.
+    is_spatial: bool = False
+    #: Number of examples in the probe batch, regardless of spatial folding.
+    n_examples: int = 0
+
     # ---- derived aggregates -------------------------------------------------
+
+    @property
+    def frac_zero_positions(self) -> np.ndarray:
+        """Per unit, the fraction of probe positions on which it emits zero.
+
+        For a conv layer these are spatial positions, and CLAUDE.md §5.5 asks
+        for this to be logged *separately* from `dead_exact` because the gap
+        between them is a conv-specific finding: a channel can be 99% spatially
+        silent and still count as alive under Dohare et al.'s definition, which
+        requires zero everywhere.
+        """
+        return 1.0 - self.frac_inputs_active
 
     @property
     def dead_exact_count(self) -> int:
@@ -404,11 +451,18 @@ def probe_layer(
     table but not the effective rank; the SVD is by far the most expensive part
     of a probe and running it ~100 extra times per run buys nothing. Task-
     boundary probes always compute it.
+
+    Accepts ``(N, U)`` or conv ``(N, C, H, W)`` activations; the latter are
+    folded to ``(N*H*W, C)`` by `as_unit_matrix`, so the unit becomes the
+    channel and every definition below is unchanged (CLAUDE.md §5.5).
     """
     if pre.shape != post.shape:
         raise ValueError(f"pre {tuple(pre.shape)} and post {tuple(post.shape)} differ")
-    if post.dim() != 2:
-        raise ValueError(f"expected (N, H) activations, got {tuple(post.shape)}")
+
+    is_spatial = post.dim() == 4
+    n_examples = int(post.shape[0])
+    post = as_unit_matrix(post)
+    pre = as_unit_matrix(pre)
 
     mean_abs = mean_abs_activation(post)
     scores = sokar_scores(mean_abs)
@@ -431,6 +485,8 @@ def probe_layer(
         sign_entropy=sign_entropy(pre),
         taus=cfg.taus,
         abs_thresholds=cfg.abs_thresholds,
+        is_spatial=is_spatial,
+        n_examples=n_examples,
     )
 
 
@@ -668,7 +724,15 @@ def layer_metric_row(
         row[f"erank{suffix}"] = p.erank
         row[f"sign_entropy{suffix}"] = p.sign_entropy
         row[f"mean_abs_act_layer{suffix}"] = float(p.mean_abs_act.mean())
+        # Logged separately from dead_exact_frac on purpose (CLAUDE.md §5.5):
+        # for a conv layer the gap between "this channel is silent at 99% of
+        # spatial positions" and "this channel is dead everywhere" is the
+        # conv-specific C2 finding, and it is not recoverable from the
+        # dead_exact count alone.
+        row[f"mean_frac_zero_positions{suffix}"] = float(p.frac_zero_positions.mean())
 
+    row["is_spatial"] = cur.is_spatial
+    row["n_examples"] = cur.n_examples
     _fill(cur, "")
     if ref is not None:
         _fill(ref, "_ref")

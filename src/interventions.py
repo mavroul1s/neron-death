@@ -115,6 +115,32 @@ def _reset_optimizer_slice(
             raise ValueError(f"unsupported dim {dim}")
 
 
+def flattened_channel_columns(channel: int, spatial: int) -> slice:
+    """Columns of a post-flatten Linear that belong to one conv channel.
+
+    A feature map flattened with ``.reshape(N, -1)`` is channel-major, so
+    channel ``c`` owns ``[c*spatial, (c+1)*spatial)``.
+
+    Isolated into its own function because CLAUDE.md §5.5 singles this out:
+    "getting that indexing wrong will silently zero the wrong columns". An
+    off-by-``spatial`` here recycles one channel and blanks another's outgoing
+    weights, and nothing raises.
+    """
+    return slice(channel * spatial, (channel + 1) * spatial)
+
+
+@torch.no_grad()
+def _zero_outgoing(module, idx_t: torch.Tensor, spatial: int) -> None:
+    """Zero the outgoing weights of the given units of the previous layer."""
+    if spatial == 1:
+        # Linear (H_next, H) or Conv2d (C_next, C, kH, kW): unit is axis 1.
+        module.weight[:, idx_t] = 0.0
+        return
+    # conv -> flatten -> Linear: each unit owns `spatial` contiguous columns.
+    for c in idx_t.tolist():
+        module.weight[:, flattened_channel_columns(int(c), spatial)] = 0.0
+
+
 @torch.no_grad()
 def recycle_neurons(
     model,
@@ -124,40 +150,47 @@ def recycle_neurons(
     optimizer: Optional[torch.optim.Optimizer] = None,
     reset_optimizer_state: bool = True,
 ) -> int:
-    """Re-initialise the given neurons of one hidden layer, in place.
+    """Re-initialise the given units of one hidden layer, in place.
 
     Sokar et al. 2023, Algorithm 1:
       * incoming weights re-sampled from the layer's *original* init
         distribution, bias reset to its init value;
       * outgoing weights set to **zero**.
 
-    Returns the number of neurons recycled.
+    Works for a fully-connected neuron and for a conv channel, where "incoming
+    weights" is the whole filter bank ``W[c, :, :, :]`` and the outgoing slice
+    may span every spatial position belonging to that channel (CLAUDE.md §5.5).
+
+    Returns the number of units recycled.
     """
     idx = np.asarray(indices, dtype=np.int64)
     if idx.size == 0:
         return 0
 
-    lin_in = model.incoming_linear(layer_idx)
-    lin_out = model.outgoing_linear(layer_idx)
-    device = lin_in.weight.device
+    mod_in = model.incoming_linear(layer_idx)
+    mod_out = model.outgoing_linear(layer_idx)
+    spatial = getattr(model, "outgoing_spatial", lambda _: 1)(layer_idx)
+    device = mod_in.weight.device
     idx_t = torch.as_tensor(idx, dtype=torch.long, device=device)
 
     # --- incoming ---------------------------------------------------------
     new_w = model.sample_incoming_weights(layer_idx, int(idx.size), weight_generator)
-    lin_in.weight[idx_t] = new_w.to(device=device, dtype=lin_in.weight.dtype)
-    if lin_in.bias is not None:
-        lin_in.bias[idx_t] = model.init_bias_value(layer_idx)
+    mod_in.weight[idx_t] = new_w.to(device=device, dtype=mod_in.weight.dtype)
+    if mod_in.bias is not None:
+        mod_in.bias[idx_t] = model.init_bias_value(layer_idx)
 
     # --- outgoing: THE half that gets forgotten ---------------------------
-    lin_out.weight[:, idx_t] = 0.0
+    _zero_outgoing(mod_out, idx_t, spatial)
     # The outgoing layer's *bias* is untouched: it is not a property of this
-    # neuron, and zeroing it would change the function for every other neuron.
+    # unit, and zeroing it would change the function for every other unit.
 
     if reset_optimizer_state:
-        _reset_optimizer_slice(optimizer, lin_in.weight, idx_t, dim=0)
-        if lin_in.bias is not None:
-            _reset_optimizer_slice(optimizer, lin_in.bias, idx_t, dim=0)
-        _reset_optimizer_slice(optimizer, lin_out.weight, idx_t, dim=1)
+        _reset_optimizer_slice(optimizer, mod_in.weight, idx_t, dim=0)
+        if mod_in.bias is not None:
+            _reset_optimizer_slice(optimizer, mod_in.bias, idx_t, dim=0)
+        _reset_optimizer_slice(
+            optimizer, mod_out.weight, idx_t, dim=1, spatial=spatial
+        )
 
     return int(idx.size)
 
