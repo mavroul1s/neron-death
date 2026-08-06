@@ -98,6 +98,46 @@ def test_checkpoint_round_trip_matches_an_uninterrupted_run(tiny_mnist_root, tmp
     assert ra["n_dead_exact"] == rb["n_dead_exact"]
 
 
+def test_intra_task_probing_is_off_by_default(tiny_mnist_root, tmp_path):
+    """It must cost nothing unless a config asks for it."""
+    runs = tmp_path / "runs"
+    run_dir = Trainer(_cfg(tiny_mnist_root, "no_intra"), runs_root=runs).run()
+    assert not (run_dir / "intra_task.parquet").exists()
+
+
+def test_intra_task_probing_samples_the_grid_after_each_switch(
+    tiny_mnist_root, tmp_path
+):
+    """CLAUDE.md §5.6: the C5 dataset. Sampled on step_in_task, so every task is
+    measured on the same grid relative to its own switch."""
+    runs = tmp_path / "runs"
+    # 512 train / batch 128 => 4 steps per task; probe every 2 steps.
+    cfg = _cfg(
+        tiny_mnist_root,
+        "intra",
+        probe={"n_probe": 64, "intra_task_probe_every": 2},
+        data={"root": str(tiny_mnist_root), "n_tasks": 3, "batch_size": 128},
+    )
+    run_dir = Trainer(cfg, runs_root=runs).run()
+
+    t = pq.read_table(run_dir / "intra_task.parquet").to_pydict()
+    got = sorted(set(zip(t["task_idx"], t["step_in_task"])))
+    # step 0 (the state the switch lands on) plus every 2nd step within 4.
+    assert got == [(0, 0), (0, 2), (0, 4), (1, 0), (1, 2), (1, 4),
+                   (2, 0), (2, 2), (2, 4)]
+
+    n_layers = 2
+    assert len(t["layer_idx"]) == len(got) * n_layers
+    # The cheap subset: death metrics present, effective rank deliberately absent.
+    for col in ("dead_exact_frac", "dormant_frac_tau_0p1", "dead_abs_frac_1em02",
+                "mean_abs_act_layer", "dead_exact_frac_ref"):
+        assert col in t, f"intra_task.parquet is missing {col}"
+    assert "erank" not in t, "intra-task probes must skip the SVD"
+
+    # global step must keep increasing so rows join to recycling events
+    assert t["step"] == sorted(t["step"])
+
+
 def test_resume_refuses_a_different_config(tiny_mnist_root, tmp_path):
     """CLAUDE.md §7: a changed hyperparameter is a new run_id, not an edit."""
     runs = tmp_path / "runs"
