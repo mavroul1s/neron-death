@@ -21,7 +21,9 @@ distribution moved" (CLAUDE.md §5).
 from __future__ import annotations
 
 import gzip
+import pickle
 import struct
+import tarfile
 from pathlib import Path
 from typing import Iterator, Optional, Sequence, Tuple
 
@@ -111,14 +113,86 @@ def load_mnist(root) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
     raise _missing_data_error("MNIST", root, list(_MNIST_IDX.values()))
 
 
+def _cifar_batches_to_arrays(load_batch) -> Tuple[np.ndarray, ...]:
+    """Assemble the official pickled batches into (x_train, y_train, x_test, y_test).
+
+    ``load_batch(name)`` returns the unpickled dict for one batch file.
+    The pickle stores images as (N, 3072) channel-major, hence the reshape to
+    (N, 3, 32, 32) followed by a transpose to the (N, 32, 32, 3) this module
+    returns everywhere.
+    """
+    xs, ys = [], []
+    for i in range(1, 6):
+        b = load_batch(f"data_batch_{i}")
+        xs.append(b[b"data"])
+        ys.append(np.asarray(b[b"labels"]))
+    test = load_batch("test_batch")
+
+    def _img(flat):
+        return flat.reshape(-1, 3, 32, 32).transpose(0, 2, 3, 1).astype(np.uint8)
+
+    return (
+        _img(np.concatenate(xs)),
+        np.concatenate(ys).astype(np.uint8),
+        _img(test[b"data"]),
+        np.asarray(test[b"labels"], dtype=np.uint8),
+    )
+
+
 def load_cifar10(root) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
-    """Returns (x_train, y_train, x_test, y_test); images uint8 (N, 32, 32, 3)."""
+    """Returns (x_train, y_train, x_test, y_test); images uint8 (N, 32, 32, 3).
+
+    Accepts every layout CIFAR-10 is actually distributed in, so a public Kaggle
+    dataset can be attached directly instead of downloading 163 MB from
+    cs.toronto.edu and re-uploading it:
+
+    1. ``<root>/cifar10.npz``            -- what `scripts/prepare_data.py` writes
+    2. ``<root>/cifar-10-batches-py/``   -- the official pickle, already extracted
+    3. ``<root>/cifar-10-python.tar.gz`` -- the official tarball, read in place
+
+    Still no download-at-runtime path (CLAUDE.md §3): every branch reads bytes
+    that are already on disk.
+    """
     root = Path(root)
+
     npz = root / "cifar10.npz"
     if npz.exists():
         with np.load(npz) as z:
             return z["x_train"], z["y_train"], z["x_test"], z["y_test"]
-    raise _missing_data_error("CIFAR10", root, ["cifar10.npz"])
+
+    # Extracted pickle batches, at the root or one level down (Kaggle datasets
+    # commonly nest the folder inside another of the same name).
+    for sub in (
+        root / "cifar-10-batches-py",
+        root,
+        root / "cifar-10-python" / "cifar-10-batches-py",
+    ):
+        if (sub / "data_batch_1").exists():
+            def _load(name, _sub=sub):
+                with open(_sub / name, "rb") as f:
+                    return pickle.load(f, encoding="bytes")
+
+            return _cifar_batches_to_arrays(_load)
+
+    for tar_path in (
+        root / "cifar-10-python.tar.gz",
+        root / "cifar-10-python" / "cifar-10-python.tar.gz",
+    ):
+        if tar_path.exists():
+            with tarfile.open(tar_path, "r:gz") as tf:
+                def _load(name, _tf=tf):
+                    member = _tf.extractfile(f"cifar-10-batches-py/{name}")
+                    if member is None:
+                        raise FileNotFoundError(f"{name} not in {tar_path}")
+                    return pickle.load(member, encoding="bytes")
+
+                return _cifar_batches_to_arrays(_load)
+
+    raise _missing_data_error(
+        "CIFAR10",
+        root,
+        ["cifar10.npz", "cifar-10-batches-py/", "cifar-10-python.tar.gz"],
+    )
 
 
 # ---------------------------------------------------------------------------
