@@ -187,6 +187,20 @@ def c3_anomaly(lr: float) -> list:
     return out
 
 
+#: Intra-task probe spacing for the C5 arm (CLAUDE.md §5.6).
+#:
+#: 25 steps out of ~469 per task gives ~19 samples per task, which resolves a
+#: spike confined to "the first few hundred steps after a task switch" -- the
+#: thing Lyle et al.'s Fig. 1 mechanism predicts and that nobody has shown
+#: explicitly. Boundary-only sampling cannot see it at all.
+#:
+#: The reference batch is switched OFF here, halving the probe cost: C5 asks
+#: *when* units die under the distribution being trained on, and the boundary
+#: log still captures the reference batch once per task. Forward-only probing at
+#: this spacing costs roughly 20% on top of training.
+C5_INTRA_TASK_EVERY = 25
+
+
 def c5_optimizer(lr: float) -> list:
     """§B.3 optimizer arms. Lyle-tuned Adam is eps=1e-3, beta2=0.9."""
     out = []
@@ -201,6 +215,10 @@ def c5_optimizer(lr: float) -> list:
         for name, optim in arms.items():
             cfg = _base(f"c5_{name}_s{seed}", seed, lr)
             cfg["optim"] = optim
+            cfg["probe"] = {
+                "intra_task_probe_every": C5_INTRA_TASK_EVERY,
+                "intra_task_probe_reference": False,
+            }
             cfg["notes"] = f"C5 optimizer arm {name} (protocol B.3)."
             out.append(cfg)
     return out
