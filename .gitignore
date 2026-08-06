@@ -21,3 +21,6 @@ __pycache__/
 *.egg-info/
 .venv/
 venv/
+
+# Staged Kaggle uploads, rebuilt by scripts/package_for_kaggle.py
+kaggle_upload/
