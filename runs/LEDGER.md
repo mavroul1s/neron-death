@@ -123,3 +123,28 @@ No new experimental data, but two things worth keeping:
 
 These 2.00 GPU-h are excluded from the weeks 1–2 budget as duplicates; the total
 stands at 5.53 / 40.
+
+### 2026-08-06 — Kaggle session 5: §B.1 slice A (`none` + `redo`)
+
+70 runs, **15.21 GPU-h**, 0 failures. 16,740 recycling-event rows — the C1
+composition table exists and `n_dead_exact + n_alive_but_quiet == k` holds for
+every single event.
+
+**The untested assumption is resolved: ReDo works in continual supervised
+learning.** +4.76 to +4.92 pp over baseline at every τ, every CI excluding zero,
+all far past the frozen plan's 2 pp "≫" threshold. C1 is not vacuous.
+
+**The pre-registered C1 pattern is met**: accuracy rises with τ (92.438 →
+92.607%) while the truly-dead fraction of the recycled set falls (31.4 → 12.3%).
+Frozen-plan verdict for that pattern: *C1 confirmed, ReDo is not a resurrection
+method.* Full table in `CLAUDE.md` §11.
+
+Not yet established, and the reason the next slice matters: ReDo also cuts
+`dead_exact` from 20.8% to 1.1–2.0% and lifts effective rank from 100 to
+165–192. Those two numbers on their own are consistent with "ReDo works by
+preventing death". The size-matched **`random_matched`** control is what
+separates *which* units from *how many*, and it has not run.
+
+Budget: 5.53 + 15.21 = **20.74 / 40 GPU-h** for weeks 1–2. The remaining
+τ-sweep slices are ~13 GPU-h each, so completing §B.1 as specified lands near
+47 GPU-h — over the weeks-1–2 budget, as flagged when the overrun was found.

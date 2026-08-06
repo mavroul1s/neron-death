@@ -39,6 +39,61 @@ import pyarrow.parquet as pq
 #: entire point of the script.
 EXTRACT_TABLES = ("tasks", "metrics", "recycling")
 
+#: The C4 subset of `neurons.parquet` (CLAUDE.md §5.4, claim C4).
+#:
+#: The full per-neuron table is 23 columns of mostly float64 and ~27 MB per run.
+#: Survival analysis needs when each unit died, how quiet it was, and whether it
+#: was recycled -- not the pre-activation moments or the saturation flag. Keeping
+#: the keys plus nine columns is enough to fit mortality curves, follow an
+#: individual neuron across recycling events, and recompute `dead_absolute` at
+#: any threshold.
+#:
+#: `mean_abs_act` and `sokar_score` stay float64: they are compared against
+#: thresholds as small as 1e-6 and against the layer mean, and this is the file
+#: those numbers would be recomputed from. The weight and gradient norms are
+#: covariates, never thresholds, so float32 is ample.
+C4_COLUMNS = (
+    "run_id",
+    "task_idx",
+    "layer_idx",
+    "neuron_idx",
+    "exact_zero_flag",
+    "exact_zero_flag_ref",
+    "mean_abs_act",
+    "sokar_score",
+    "was_recycled_this_task",
+    "w_in_norm",
+    "w_out_norm",
+    "grad_norm_neuron",
+)
+C4_FLOAT32 = ("w_in_norm", "w_out_norm", "grad_norm_neuron")
+
+
+def build_c4(run_dirs, dest: Path) -> Optional[Path]:
+    """Slim per-neuron table for C4, concatenated across runs."""
+    tables = []
+    for d in run_dirs:
+        path = d / "neurons.parquet"
+        if not path.exists():
+            continue
+        t = pq.read_table(path, columns=[c for c in C4_COLUMNS if c != "run_id"])
+        if "run_id" in C4_COLUMNS:
+            t = t.append_column(
+                "run_id", pa.array([d.name] * t.num_rows, pa.string())
+            )
+        fields = [
+            pa.field(f.name, pa.float32() if f.name in C4_FLOAT32 else f.type)
+            for f in t.schema
+        ]
+        tables.append(t.cast(pa.schema(fields)))
+    if not tables:
+        return None
+    combined = pa.concat_tables(tables, promote_options="permissive").select(
+        list(C4_COLUMNS)
+    )
+    pq.write_table(combined, dest, compression="zstd", use_dictionary=["run_id"])
+    return dest
+
 
 def main(argv=None) -> int:
     ap = argparse.ArgumentParser(description=__doc__)
@@ -46,6 +101,13 @@ def main(argv=None) -> int:
     ap.add_argument("--out", default="dist/extract")
     ap.add_argument("--pattern", default="*", help="glob over run_ids")
     ap.add_argument("--zip", action="store_true", help="also write <out>.zip")
+    ap.add_argument(
+        "--with-c4",
+        action="store_true",
+        help="also emit the slim per-neuron table needed for the C4 survival "
+        "analysis (a fraction of neurons.parquet, but still the largest file "
+        "in the extract)",
+    )
     args = ap.parse_args(argv)
 
     root = Path(args.runs_root)
@@ -76,6 +138,13 @@ def main(argv=None) -> int:
         dest = out / f"{name}.parquet"
         pq.write_table(combined, dest, compression="zstd")
         print(f"  {name:12s} {combined.num_rows:>9,d} rows  {dest.stat().st_size/1e6:6.2f} MB")
+
+    if args.with_c4:
+        c4 = build_c4(run_dirs, out / "neurons_c4.parquet")
+        if c4 is not None:
+            t = pq.read_metadata(c4)
+            print(f"  {'neurons_c4':12s} {t.num_rows:>9,d} rows  "
+                  f"{c4.stat().st_size/1e6:6.2f} MB")
 
     # Configs and summaries are tiny and make the extract self-describing: the
     # analysis can recover every hyperparameter without the full runs tree.
