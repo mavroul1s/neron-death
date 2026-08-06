@@ -325,12 +325,24 @@ class LabelShuffledCIFAR10(ContinualDataset):
         batch_size: int = 128,
         n_probe: int = 2048,
         reference: str = "identity",
+        flatten: bool = True,
     ):
         x_tr, y_tr, x_te, y_te = load_cifar10(root)
-        x_tr = x_tr.reshape(len(x_tr), -1).astype(np.float32) / 255.0
-        x_te = x_te.reshape(len(x_te), -1).astype(np.float32) / 255.0
+
+        def _prep(x):
+            # npz holds (N, 32, 32, 3) uint8. The CNN needs NCHW; an MLP needs
+            # it flat. Scaled to [0, 1] and nothing else, matching the MNIST
+            # path -- per-channel standardisation would be one more difference
+            # between Settings 1 and 2 than the design intends.
+            x = x.astype(np.float32) / 255.0
+            if flatten:
+                return x.reshape(len(x), -1)
+            return np.transpose(x, (0, 3, 1, 2))
+
+        x_tr, x_te = _prep(x_tr), _prep(x_te)
         y_tr = y_tr.astype(np.int64).ravel()
         y_te = y_te.astype(np.int64).ravel()
+        self.flatten = bool(flatten)
         super().__init__(x_tr, y_tr, x_te, y_te, n_tasks, seed, device, batch_size, n_probe)
 
         rng = np.random.default_rng([self.seed, _SALT_PERMUTATION])
@@ -364,5 +376,6 @@ def build_dataset(cfg: dict, device: torch.device) -> ContinualDataset:
     if name == "permuted_mnist":
         return PermutedMNIST(**kwargs)
     if name == "label_shuffled_cifar10":
-        return LabelShuffledCIFAR10(**kwargs)
+        # flatten=False keeps images as NCHW for the CNN of Setting 2.
+        return LabelShuffledCIFAR10(**kwargs, flatten=bool(cfg.get("flatten", True)))
     raise ValueError(f"unknown dataset {name!r}")

@@ -86,6 +86,7 @@ def _reset_optimizer_slice(
     param: torch.Tensor,
     index: torch.Tensor,
     dim: int,
+    spatial: int = 1,
 ) -> None:
     """Zero the optimizer's per-parameter state for the recycled slice.
 
@@ -110,7 +111,13 @@ def _reset_optimizer_slice(
         if dim == 0:
             value[index] = 0
         elif dim == 1:
-            value[:, index] = 0
+            if spatial == 1:
+                value[:, index] = 0
+            else:
+                # conv -> flatten -> Linear: mirror the weight slicing exactly,
+                # or the moments of the wrong columns get cleared.
+                for c in index.tolist():
+                    value[:, flattened_channel_columns(int(c), spatial)] = 0
         else:
             raise ValueError(f"unsupported dim {dim}")
 
@@ -312,8 +319,15 @@ class Recycler:
         try:
             # 1. Scores, from the 64-example batch (Sokar Algorithm 1).
             _, _, score_posts = model.forward_with_activations(score_x)
+            # as_unit_matrix folds a conv layer's (N, C, H, W) to (N*H*W, C) so
+            # the unit is the channel. Without it a conv layer yields C*H*W
+            # "units" and every index downstream is meaningless.
             layer_scores = [
-                probes.sokar_scores(probes.mean_abs_activation(p)).cpu().numpy()
+                probes.sokar_scores(
+                    probes.mean_abs_activation(probes.as_unit_matrix(p))
+                )
+                .cpu()
+                .numpy()
                 for p in score_posts
             ]
 

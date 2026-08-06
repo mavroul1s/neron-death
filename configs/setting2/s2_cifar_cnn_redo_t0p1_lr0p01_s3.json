@@ -1,0 +1,38 @@
+{
+  "data": {
+    "batch_size": 128,
+    "flatten": false,
+    "n_tasks": 50,
+    "name": "label_shuffled_cifar10",
+    "root": "data"
+  },
+  "device": "auto",
+  "model": {
+    "activation": "relu",
+    "architecture": "cnn",
+    "channels": [
+      32,
+      64,
+      64
+    ],
+    "fc_dims": [
+      128
+    ],
+    "image_size": 32,
+    "in_channels": 3,
+    "out_features": 10
+  },
+  "notes": "Setting 2, label-shuffled CIFAR-10 + small CNN, arm redo_t0p1 (CLAUDE.md \u00a79). Unit is a channel.",
+  "optim": {
+    "lr": 0.01,
+    "momentum": 0.9,
+    "name": "sgd"
+  },
+  "recycling": {
+    "freq": 1000,
+    "kind": "redo",
+    "tau": 0.1
+  },
+  "run_id": "s2_cifar_cnn_redo_t0p1_lr0p01_s3",
+  "seed": 3
+}

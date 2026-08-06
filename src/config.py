@@ -37,8 +37,11 @@ DEFAULT_CONFIG: Dict[str, Any] = {
         "batch_size": 128,
         "n_probe": 2048,
         "reference": "identity",
+        # CIFAR-10 only: False keeps images NCHW for the Setting 2 CNN.
+        "flatten": True,
     },
     "model": {
+        "architecture": "mlp",  # mlp | cnn
         "in_features": 784,
         "hidden_dims": [500, 500, 500],
         "out_features": 10,

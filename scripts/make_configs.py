@@ -241,6 +241,80 @@ def eps_sweep(lr: float) -> list:
     return out
 
 
+def setting2_cifar_cnn(lr: float) -> list:
+    """Setting 2 (CLAUDE.md §9): label-shuffled CIFAR-10 with a small CNN.
+
+    Replicates C1 and C2 only, and is a C2 *extension* rather than a repeat
+    because the unit becomes a channel: "dead" now has to mean zero across all
+    inputs AND all spatial positions, and whether the published definitions
+    survive that generalisation is part of the claim.
+
+    Chosen over a CNN on MNIST deliberately -- it varies dataset, architecture
+    and kind of non-stationarity at once, where a CNN on MNIST would vary
+    architecture alone and be much weaker evidence.
+
+    Arms: baseline, ReDo and the size-matched random control at Sokar's best
+    tau. Not a full tau-sweep: Setting 2 exists to show the Setting 1 result is
+    not an artefact of MLPs on permuted MNIST, and ~6 GPU-h is the budget.
+    """
+    out = []
+    for seed in range(5):
+        arms = {
+            "none": {"kind": "none"},
+            "redo_t0p1": {"kind": "redo", "tau": 0.1, "freq": 1000},
+            "random_t0p1": {"kind": "random_matched", "tau": 0.1, "freq": 1000},
+        }
+        for name, recycling in arms.items():
+            rid = f"s2_cifar_cnn_{name}_lr{lr:g}_s{seed}".replace(".", "p")
+            cfg = _base(rid, seed, lr, n_tasks=50)
+            cfg["data"] = {
+                "name": "label_shuffled_cifar10",
+                "root": DATA_ROOT,
+                "n_tasks": 50,
+                "batch_size": 128,
+                "flatten": False,  # keep NCHW for the conv stack
+            }
+            cfg["model"] = {
+                "architecture": "cnn",
+                "in_channels": 3,
+                "image_size": 32,
+                "channels": [32, 64, 64],
+                "fc_dims": [128],
+                "out_features": 10,
+                "activation": "relu",
+            }
+            cfg["recycling"] = recycling
+            cfg["notes"] = (
+                f"Setting 2, label-shuffled CIFAR-10 + small CNN, arm {name} "
+                "(CLAUDE.md §9). Unit is a channel."
+            )
+            out.append(cfg)
+    return out
+
+
+def setting3_activations(lr: float) -> list:
+    """Setting 3 (CLAUDE.md §9): the activation sweep, one config field.
+
+    The strongest single demonstration that the field's definitions are not
+    measuring one underlying thing:
+
+    * under GELU and SiLU a unit never emits exactly zero, so `dead_exact` --
+      Dohare et al.'s definition, the one in the *Nature* paper -- is
+      identically zero **by construction**, while `dormant_tau` and
+      `dead_absolute` keep flagging units normally;
+    * under tanh, `saturated` fires where `dead_exact` cannot.
+    """
+    out = []
+    for seed in range(5):
+        for act in ("relu", "leaky_relu", "gelu", "silu", "tanh"):
+            rid = f"s3_act_{act}_lr{lr:g}_s{seed}".replace(".", "p")
+            cfg = _base(rid, seed, lr)
+            cfg["model"]["activation"] = act
+            cfg["notes"] = f"Setting 3 activation sweep, {act} (CLAUDE.md §9)."
+            out.append(cfg)
+    return out
+
+
 EXPERIMENTS = {
     "gate": lambda lr: gate(),
     # Protocol §A.4 failure responses, in the order they must be tried.
@@ -251,6 +325,9 @@ EXPERIMENTS = {
     "c3": c3_anomaly,
     "c5": c5_optimizer,
     "eps": eps_sweep,
+    # CLAUDE.md §9 replacements for the cancelled transformer arm.
+    "setting2": setting2_cifar_cnn,
+    "setting3": setting3_activations,
 }
 
 

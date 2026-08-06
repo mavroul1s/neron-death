@@ -242,3 +242,99 @@ def test_conv_init_resampling_uses_the_layers_own_distribution(cnn):
     spec = cnn.init_specs[0]
     assert w.shape == (64,) + tuple(cnn.incoming_module(0).weight.shape[1:])
     assert float(w.abs().max()) <= spec.bound + 1e-6
+
+
+# ---------------------------------------------------------------------------
+# Setting 3: smooth activations make dead_exact vanish by construction
+# ---------------------------------------------------------------------------
+
+
+def _smooth_model(act, bias, seed=7):
+    """Every unit pinned to exactly `bias` pre-activation.
+
+    Weights are zeroed so the pre-activation is the bias exactly, on every
+    input. Without that, weight variance pushes some units past GELU's underflow
+    point and others not, and the test measures the seed rather than the
+    activation function.
+    """
+    from src.models import MLP
+
+    g = torch.Generator().manual_seed(seed)
+    model = MLP(
+        in_features=16, hidden_dims=(24,), out_features=3, activation=act, generator=g
+    )
+    with torch.no_grad():
+        model.incoming_linear(0).weight.zero_()
+        model.incoming_linear(0).bias[:] = bias
+    model.eval()
+    return probes.probe_model(
+        model, torch.rand(64, 16, generator=g), probes.ProbeConfig()
+    )[0]
+
+
+@pytest.mark.parametrize(
+    "act, bias",
+    [
+        # Chosen just above each activation's float32 underflow point, so the
+        # unit is functionally dead but not *exactly* zero. The two biases
+        # differ by 4x because the underflow points do -- itself the point.
+        ("gelu", -5.0),
+        ("silu", -20.0),
+    ],
+)
+def test_smooth_activations_hide_units_from_dead_exact(act, bias):
+    """Setting 3's C2 result (CLAUDE.md §9): a functionally dead GELU/SiLU unit
+    emits something tiny rather than zero, so Dohare et al.'s definition -- the
+    one in the *Nature* paper -- reports nothing, while `dead_absolute` flags
+    the same units as thoroughly dead."""
+    p = _smooth_model(act, bias=bias)
+    assert p.dead_exact_count == 0
+    assert p.dead_absolute_count(1e-4) == p.n_neurons
+    assert p.saturated is None  # unbounded: not applicable, never 0.0
+
+
+def test_silu_essentially_cannot_produce_an_exact_zero():
+    """SiLU needs a pre-activation near -90 before sigmoid underflows, which no
+    trained network reaches. For SiLU the 'by construction' claim holds."""
+    assert _smooth_model("silu", bias=-50.0).dead_exact_count == 0
+
+
+def test_gelu_dead_exact_is_a_floating_point_artefact_not_a_property():
+    """**Correction to CLAUDE.md §9.** `dead_exact` is NOT identically zero
+    under GELU: in float32, ``1 + erf(x/sqrt(2))`` rounds to zero at
+    x <= -5.55, so GELU underflows to exactly 0.0 there -- a pre-activation
+    trained networks do reach.
+
+    Worse for the definition, the threshold is dtype-dependent (-8.40 in
+    float64), so the *same unit with the same weights on the same inputs* is
+    "dead" in float32 and "alive" in float64. Dohare et al.'s definition is not
+    merely activation-dependent; it is not dtype-independent either. That is a
+    C2 finding in its own right and belongs in the paper rather than being
+    engineered around.
+    """
+    gelu = torch.nn.GELU(approximate="none")
+    x = torch.tensor([-7.0])
+    assert float(gelu(x.float())) == 0.0
+    assert float(gelu(x.double())) != 0.0
+
+    # And it fires through the probe at a realistic magnitude.
+    assert _smooth_model("gelu", bias=-7.0).dead_exact_count == 24
+    assert _smooth_model("gelu", bias=-3.0).dead_exact_count == 0
+
+
+def test_tanh_saturation_fires_where_dead_exact_cannot():
+    """The other half of Setting 3: under tanh, `saturated` catches units that
+    `dead_exact` structurally cannot."""
+    from src.models import MLP
+
+    g = torch.Generator().manual_seed(7)
+    model = MLP(
+        in_features=16, hidden_dims=(24,), out_features=3, activation="tanh", generator=g
+    )
+    with torch.no_grad():
+        model.incoming_linear(0).bias[:] = -50.0  # pinned at -1
+    model.eval()
+
+    p = probes.probe_model(model, torch.rand(64, 16, generator=g), probes.ProbeConfig())[0]
+    assert p.dead_exact_count == 0
+    assert p.saturated_frac == pytest.approx(1.0)

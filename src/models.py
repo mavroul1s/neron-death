@@ -37,6 +37,12 @@ ACTIVATION_EXTREMES: Dict[str, Optional[Tuple[float, ...]]] = {
     "relu": None,
     "leaky_relu": None,
     "identity": None,
+    # Smooth activations (Setting 3, CLAUDE.md §9). Unbounded, so `saturated` is
+    # not applicable -- and note that under these a unit never emits exactly
+    # zero, which makes `dead_exact` identically zero by construction. That is
+    # the C2 result the sweep exists to produce, not a bug to work around.
+    "gelu": None,
+    "silu": None,
     "tanh": (-1.0, 1.0),
     "sigmoid": (0.0, 1.0),
 }
@@ -49,6 +55,12 @@ def make_activation(name: str, param: float = 0.01) -> nn.Module:
         # `param` is the negative slope, the epsilon of the demoted eps-sweep
         # (protocol §B.4).
         return nn.LeakyReLU(negative_slope=param)
+    if name == "gelu":
+        # Exact erf form, not tanh-approximate: the approximation perturbs
+        # small-magnitude activations, which is precisely what is being measured.
+        return nn.GELU(approximate="none")
+    if name == "silu":
+        return nn.SiLU()
     if name == "tanh":
         return nn.Tanh()
     if name == "sigmoid":
@@ -67,6 +79,13 @@ def _init_gain(activation: str, param: float) -> float:
         return nn.init.calculate_gain("leaky_relu", param)
     if activation == "tanh":
         return nn.init.calculate_gain("tanh")
+    if activation in ("gelu", "silu"):
+        # torch has no tabulated gain for these. Both are ReLU-like away from
+        # the origin, so the ReLU gain is the standard choice and keeps the
+        # initialisation scale comparable across the Setting 3 arms -- which
+        # matters, because a different init scale per arm would confound the
+        # very comparison the sweep is making.
+        return nn.init.calculate_gain("relu")
     if activation in ("sigmoid", "identity"):
         # torch's gain for sigmoid is 1.0, same as linear.
         return nn.init.calculate_gain("linear")
