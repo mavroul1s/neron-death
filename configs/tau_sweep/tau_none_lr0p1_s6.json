@@ -1,0 +1,26 @@
+{
+  "data": {
+    "batch_size": 128,
+    "n_tasks": 200,
+    "name": "permuted_mnist",
+    "root": "data"
+  },
+  "device": "auto",
+  "model": {
+    "activation": "relu",
+    "hidden_dims": [
+      500,
+      500,
+      500
+    ],
+    "init": "kaiming_uniform"
+  },
+  "notes": "tau-sweep baseline, no intervention (protocol B.1).",
+  "optim": {
+    "lr": 0.1,
+    "momentum": 0.9,
+    "name": "sgd"
+  },
+  "run_id": "tau_none_lr0p1_s6",
+  "seed": 6
+}

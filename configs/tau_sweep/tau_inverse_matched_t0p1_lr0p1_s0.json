@@ -1,0 +1,32 @@
+{
+  "data": {
+    "batch_size": 128,
+    "n_tasks": 200,
+    "name": "permuted_mnist",
+    "root": "data"
+  },
+  "device": "auto",
+  "model": {
+    "activation": "relu",
+    "hidden_dims": [
+      500,
+      500,
+      500
+    ],
+    "init": "kaiming_uniform"
+  },
+  "notes": "tau-sweep arm inverse_matched at tau=0.1 (protocol B.1).",
+  "optim": {
+    "lr": 0.1,
+    "momentum": 0.9,
+    "name": "sgd"
+  },
+  "recycling": {
+    "freq": 1000,
+    "kind": "inverse_matched",
+    "score_batch_size": 64,
+    "tau": 0.1
+  },
+  "run_id": "tau_inverse_matched_t0p1_lr0p1_s0",
+  "seed": 0
+}
