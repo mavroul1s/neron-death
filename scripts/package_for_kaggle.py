@@ -77,24 +77,43 @@ Two files in this folder. They go to two DIFFERENT places on Kaggle.
     Upload the .zip as-is. Kaggle unzips it for you.
     It already contains mnist.npz, so this is the ONLY dataset you need to
     attach. You do not need a separate MNIST dataset.
+    UPLOAD THIS FIRST, and re-upload it whenever the code or configs change.
 
 
-2_NOTEBOOK_neuron-death.ipynb
+2_*.ipynb ... 7_*.ipynb   -- one notebook per experiment
     -> https://www.kaggle.com/code   ("New Notebook" -> File -> Import Notebook)
 
+    These are INDEPENDENT. No experiment reads another's output and every
+    learning rate is already fixed by the gate, so they can all run at the same
+    time in separate sessions. Nothing inside them needs editing.
 
-THEN, in the notebook:
+    Priority order if you run them one at a time:
+      2_tau_a_none_redo        <- run this one first if you run only one
+      3_tau_b_random_matched
+      4_setting3_activations
+      5_c5_optimizers
+      6_tau_c_inverse_matched
+      7_setting2_cifar_cnn     <- blocked, see below
+
+
+THEN, in each notebook:
     - Add Input -> attach the dataset from step 1
     - Accelerator -> GPU T4 x2
-    - Set EXPERIMENT in the "Pick the experiment" cell (see below)
     - Run All
 
 
-PRE-FLIGHT CHECK (saves hours)
-    The "Pick the experiment" cell prints the config count. Confirm it matches
-    what you expect before letting the sweep run. If it errors with
-    "no configs in .../configs/<name>", the dataset version did not update --
-    re-upload rather than letting it run.
+PRE-FLIGHT CHECK (built in)
+    The "Pick the experiment" cell now ASSERTS the config count and stops if it
+    is wrong. If it fails, the attached Dataset is a stale version -- re-upload
+    step 1 rather than letting the sweep run.
+
+
+KNOWN BLOCKER
+    7_setting2_cifar_cnn needs CIFAR-10, which is not in the dataset yet:
+        python scripts/prepare_data.py --dataset cifar10 --root data
+        python scripts/package_for_kaggle.py      (re-bundles it)
+    Its per-run cost is also unmeasured -- a conv net is not an MLP. Read the
+    smoke-test cell's printed time and multiply by 15 before running the sweep.
 
 
 AT THE END

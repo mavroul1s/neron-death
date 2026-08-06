@@ -61,21 +61,6 @@ JOBS = [
         ),
     },
     {
-        "name": "tau_c_inverse_matched",
-        "experiment": "tau_sweep",
-        "globs": ["tau_inverse_*.json"],
-        "pattern": "tau_inverse_*",
-        "is_gate": False,
-        "runs": 60,
-        "hours": 6.5,
-        "why": (
-            "Sanity check replicating Sokar et al. Fig. 15: recycling the "
-            "highest-scoring units should collapse performance. Lowest priority "
-            "of the three tau slices -- if compute is short, cut this to 1-2 tau "
-            "values and record the trim in configs/DEVIATIONS.md."
-        ),
-    },
-    {
         "name": "setting3_activations",
         "experiment": "setting3",
         "globs": ["*.json"],
@@ -102,6 +87,21 @@ JOBS = [
             "SGD / Adam / Lyle-tuned Adam / AdamW, with intra-task probing every "
             "25 steps to catch the post-switch death spike. ~20% slower per run "
             "than the others because of the extra probes."
+        ),
+    },
+    {
+        "name": "tau_c_inverse_matched",
+        "experiment": "tau_sweep",
+        "globs": ["tau_inverse_*.json"],
+        "pattern": "tau_inverse_*",
+        "is_gate": False,
+        "runs": 60,
+        "hours": 6.5,
+        "why": (
+            "Sanity check replicating Sokar et al. Fig. 15: recycling the "
+            "highest-scoring units should collapse performance. Lowest priority "
+            "of the three tau slices -- if compute is short, cut this to 1-2 tau "
+            "values and record the trim in configs/DEVIATIONS.md."
         ),
     },
     {
