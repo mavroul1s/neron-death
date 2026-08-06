@@ -166,6 +166,8 @@ class Trainer:
             ),
             "neurons": ShardedParquetLog(self.run_dir, "neurons", schema=NEURON_SCHEMA),
             "recycling": ShardedParquetLog(self.run_dir, "recycling"),
+            # Empty unless probe.intra_task_probe_every is set (C5, §5.6).
+            "intra_task": ShardedParquetLog(self.run_dir, "intra_task"),
         }
 
         save_config(self.cfg, self.run_dir / "config.json")
@@ -230,6 +232,14 @@ class Trainer:
         loss_sum = torch.zeros((), dtype=torch.float64, device=self.device)
         seen = 0
         n_recycled = 0
+        step_in_task = 0
+        intra_every = self.probe_cfg.intra_task_probe_every
+
+        # Step 0 of the task: the state the switch lands on, before any gradient
+        # has been taken under the new distribution. Without this the death
+        # spike C5 predicts has no baseline to be a spike above.
+        if intra_every:
+            self._intra_task_probe(task_idx, step_in_task, probe_x)
 
         for xb, yb in ds.task_batches(task_idx):
             logits = model(xb)
@@ -251,9 +261,16 @@ class Trainer:
             opt.step()
 
             self.global_step += 1
+            step_in_task += 1
             bs = int(yb.shape[0])
             loss_sum += loss.detach().to(torch.float64) * bs
             seen += bs
+
+            # Counted on step_in_task, not global_step: C5 is about distance
+            # from the task switch, so the sampling grid must be aligned to the
+            # switch and identical in every task.
+            if intra_every and step_in_task % intra_every == 0:
+                self._intra_task_probe(task_idx, step_in_task, probe_x)
 
             if self.recycler.due(self.global_step):
                 score_x, _ = ds.score_batch(
@@ -295,6 +312,46 @@ class Trainer:
             shrink_and_perturb(model, self.sp.shrink, self.sp.perturb, self._sp_gen)
 
     # -- measurement ----------------------------------------------------------
+
+    @torch.no_grad()
+    def _intra_task_probe(
+        self, task_idx: int, step_in_task: int, probe_x: torch.Tensor
+    ) -> None:
+        """The cheap probe subset, mid-task (CLAUDE.md §5.6).
+
+        No effective rank and no per-neuron rows: at every-100-steps this fires
+        ~5x per task, and the float64 SVD plus a 1500-row block each time would
+        cost more than the training it is measuring.
+        """
+        model = self.model
+        was_training = model.training
+        model.eval()
+        try:
+            cur = probes.probe_model(model, probe_x, self.probe_cfg, compute_erank=False)
+            ref = (
+                probes.probe_model(
+                    model, self.ref_x, self.probe_cfg, compute_erank=False
+                )
+                if self.probe_cfg.intra_task_probe_reference
+                else None
+            )
+            self.logs["intra_task"].add_rows(
+                [
+                    probes.intra_task_metric_row(
+                        run_id=self.run_id,
+                        task_idx=task_idx,
+                        step=self.global_step,
+                        step_in_task=step_in_task,
+                        layer_idx=li,
+                        cur=cur[li],
+                        ref=None if ref is None else ref[li],
+                    )
+                    for li in range(model.n_hidden)
+                ]
+            )
+        finally:
+            if was_training:
+                model.train()
 
     @torch.no_grad()
     def _boundary(

@@ -102,9 +102,26 @@ class ProbeConfig:
     n_probe: int = PROBE_BATCH_SIZE
     grad_window: int = GRAD_WINDOW
 
+    #: Intra-task probing (CLAUDE.md §5.6). Steps between probes *within* a
+    #: task; None disables it and costs nothing.
+    #:
+    #: The boundary log fires once per task, which cannot see what C5 is about:
+    #: Adam is hypothesised to kill units in the first few hundred steps after a
+    #: task switch, when m-hat has updated aggressively but v-hat has not.
+    #: Sampling once per task is a photograph a day of a lightning strike.
+    #:
+    #: Like the boundary log, this is NOT recoverable retrospectively -- it must
+    #: be switched on before the C5 arm runs, not after.
+    intra_task_probe_every: Optional[int] = None
+    #: Also probe the reference batch at intra-task points. Doubles the probe
+    #: cost; worth it because the reference/current gap turned out to be a
+    #: finding in its own right (last-hidden-layer death is distribution-relative).
+    intra_task_probe_reference: bool = True
+
     @classmethod
     def from_dict(cls, d: Optional[dict]) -> "ProbeConfig":
         d = dict(d or {})
+        every = d.get("intra_task_probe_every")
         return cls(
             taus=tuple(float(t) for t in d.get("taus", DEFAULT_TAUS)),
             abs_thresholds=tuple(
@@ -113,6 +130,8 @@ class ProbeConfig:
             saturation_eps=float(d.get("saturation_eps", DEFAULT_SATURATION_EPS)),
             n_probe=int(d.get("n_probe", PROBE_BATCH_SIZE)),
             grad_window=int(d.get("grad_window", GRAD_WINDOW)),
+            intra_task_probe_every=None if every in (None, 0) else int(every),
+            intra_task_probe_reference=bool(d.get("intra_task_probe_reference", True)),
         )
 
     def to_dict(self) -> dict:
@@ -122,6 +141,8 @@ class ProbeConfig:
             "saturation_eps": self.saturation_eps,
             "n_probe": self.n_probe,
             "grad_window": self.grad_window,
+            "intra_task_probe_every": self.intra_task_probe_every,
+            "intra_task_probe_reference": self.intra_task_probe_reference,
         }
 
 
@@ -647,6 +668,51 @@ def layer_metric_row(
         row[f"erank{suffix}"] = p.erank
         row[f"sign_entropy{suffix}"] = p.sign_entropy
         row[f"mean_abs_act_layer{suffix}"] = float(p.mean_abs_act.mean())
+
+    _fill(cur, "")
+    if ref is not None:
+        _fill(ref, "_ref")
+    return row
+
+
+def intra_task_metric_row(
+    run_id: str,
+    task_idx: int,
+    step: int,
+    step_in_task: int,
+    layer_idx: int,
+    cur: LayerProbe,
+    ref: Optional[LayerProbe],
+) -> dict:
+    """One row of intra_task.parquet: (run_id, task_idx, step, layer_idx).
+
+    The cheap subset of the boundary metrics (CLAUDE.md §5.6): death counts and
+    activation magnitude, but no effective rank -- the float64 SVD is what makes
+    a full probe expensive, and running it ~100x more often would dominate the
+    run for a quantity C5 does not use.
+
+    ``step_in_task`` is what the C5 analysis actually regresses on: it is the
+    distance from the task switch, which is where the predicted death spike
+    lives. ``step`` is the global counter, kept so rows join to recycling events.
+    """
+    row: Dict[str, object] = {
+        "run_id": run_id,
+        "task_idx": task_idx,
+        "step": step,
+        "step_in_task": step_in_task,
+        "layer_idx": layer_idx,
+        "n_neurons": cur.n_neurons,
+    }
+
+    def _fill(p: LayerProbe, suffix: str) -> None:
+        row[f"dead_exact_frac{suffix}"] = p.dead_exact_frac
+        row[f"dead_exact_count{suffix}"] = p.dead_exact_count
+        for tau in p.taus:
+            row[f"{dormant_col(tau)}{suffix}"] = p.dormant_frac(tau)
+        for a in p.abs_thresholds:
+            row[f"{dead_abs_col(a)}{suffix}"] = p.dead_absolute_frac(a)
+        row[f"mean_abs_act_layer{suffix}"] = float(p.mean_abs_act.mean())
+        row[f"sign_entropy{suffix}"] = p.sign_entropy
 
     _fill(cur, "")
     if ref is not None:

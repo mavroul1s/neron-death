@@ -84,6 +84,12 @@ DEFAULT_CONFIG: Dict[str, Any] = {
         "saturation_eps": 1e-3,
         "n_probe": 2048,
         "grad_window": 100,
+        # Intra-task probing (CLAUDE.md §5.6). null disables and costs nothing;
+        # the C5 arm must set it, because boundary-only sampling cannot see a
+        # death spike that happens in the first few hundred steps after a task
+        # switch, and the data is not recoverable retrospectively.
+        "intra_task_probe_every": None,
+        "intra_task_probe_reference": True,
     },
     "checkpoint": {
         "every_tasks": 10,
