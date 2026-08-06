@@ -49,10 +49,16 @@ EXTRACT_TABLES = ("tasks", "metrics", "recycling")
 #: individual neuron across recycling events, and recompute `dead_absolute` at
 #: any threshold.
 #:
-#: `mean_abs_act` and `sokar_score` stay float64: they are compared against
-#: thresholds as small as 1e-6 and against the layer mean, and this is the file
-#: those numbers would be recomputed from. The weight and gradient norms are
-#: covariates, never thresholds, so float32 is ample.
+#: `mean_abs_act` stays float64: it is compared against thresholds as small as
+#: 1e-6, and this is the file those numbers would be recomputed from. The weight
+#: and gradient norms are survival covariates, never thresholds, so float32 is
+#: ample and halves them.
+#:
+#: `sokar_score` is deliberately **omitted** although C4 uses it. It was the
+#: single largest column (30% of the file) and it is exactly recomputable:
+#: ``score = mean_abs_act / mean_abs_act.groupby([run, task, layer]).mean()``,
+#: which is `probes.sokar_scores` by definition. Storing a derived column at 21
+#: million rows to save one groupby is not a good trade.
 C4_COLUMNS = (
     "run_id",
     "task_idx",
@@ -61,7 +67,6 @@ C4_COLUMNS = (
     "exact_zero_flag",
     "exact_zero_flag_ref",
     "mean_abs_act",
-    "sokar_score",
     "was_recycled_this_task",
     "w_in_norm",
     "w_out_norm",

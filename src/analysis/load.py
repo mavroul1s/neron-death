@@ -136,6 +136,25 @@ def recycling_composition(runs: Iterable[Run]) -> pd.DataFrame:
     return out
 
 
+def add_sokar_score(neurons_c4: pd.DataFrame) -> pd.DataFrame:
+    """Recompute `sokar_score` on a C4 extract, which omits it to save 30%.
+
+    The Sokar score is the neuron's mean absolute activation over the mean of
+    that layer's, so it is exactly recoverable from what the extract does carry
+    (`scripts/make_analysis_extract.py:C4_COLUMNS`). Same definition as
+    `probes.sokar_scores`, including the 0/0 := 0 convention for a wholly dead
+    layer.
+    """
+    df = neurons_c4.copy()
+    layer_mean = df.groupby(["run_id", "task_idx", "layer_idx"])[
+        "mean_abs_act"
+    ].transform("mean")
+    df["sokar_score"] = np.where(
+        layer_mean > 0, df["mean_abs_act"] / layer_mean.where(layer_mean > 0, 1.0), 0.0
+    )
+    return df
+
+
 def death_metric_columns(metrics: pd.DataFrame) -> Dict[str, List[str]]:
     """Group metrics.parquet columns by death definition, for the C2 figure."""
     cols = list(metrics.columns)
