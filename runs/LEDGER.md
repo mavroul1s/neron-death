@@ -21,8 +21,18 @@ run's `summary.json` is the source of truth. Free-text notes go under
 | `gate_pmnist_w500_sgd_lr0p01_s2` | `10e23366591ebfbe` | 2026-08-05 | complete | 0.22 | cuda | 200 | Week 1 reproduction gate (protocol A.4). |
 | `gate_pmnist_w500_sgd_lr0p01_s3` | `d37baef401e1adcb` | 2026-08-05 | complete | 0.23 | cuda | 200 | Week 1 reproduction gate (protocol A.4). |
 | `gate_pmnist_w500_sgd_lr0p01_s4` | `b43463d78c1246b7` | 2026-08-05 | complete | 0.22 | cuda | 200 | Week 1 reproduction gate (protocol A.4). |
+| `gatehi_pmnist_w500_sgd_lr0p03_s0` | `2c82869f0db67fea` | 2026-08-06 | complete | 0.20 | cuda | 200 | Week 1 gate, raised learning rate (protocol A.4 failure response step 1). |
+| `gatehi_pmnist_w500_sgd_lr0p03_s1` | `b9832daf19e16a24` | 2026-08-06 | complete | 0.21 | cuda | 200 | Week 1 gate, raised learning rate (protocol A.4 failure response step 1). |
+| `gatehi_pmnist_w500_sgd_lr0p03_s2` | `74a7b30b0bcbb5b0` | 2026-08-06 | complete | 0.21 | cuda | 200 | Week 1 gate, raised learning rate (protocol A.4 failure response step 1). |
+| `gatehi_pmnist_w500_sgd_lr0p03_s3` | `16319620c3b97afd` | 2026-08-06 | complete | 0.21 | cuda | 200 | Week 1 gate, raised learning rate (protocol A.4 failure response step 1). |
+| `gatehi_pmnist_w500_sgd_lr0p03_s4` | `2eea3306ad9bea0d` | 2026-08-06 | complete | 0.21 | cuda | 200 | Week 1 gate, raised learning rate (protocol A.4 failure response step 1). |
+| `gatehi_pmnist_w500_sgd_lr0p1_s0` | `4498d8618e548c5c` | 2026-08-06 | complete | 0.21 | cuda | 200 | Week 1 gate, raised learning rate (protocol A.4 failure response step 1). |
+| `gatehi_pmnist_w500_sgd_lr0p1_s1` | `c7ebce9a241bbf06` | 2026-08-06 | complete | 0.21 | cuda | 200 | Week 1 gate, raised learning rate (protocol A.4 failure response step 1). |
+| `gatehi_pmnist_w500_sgd_lr0p1_s2` | `50abdab54f4477ce` | 2026-08-06 | complete | 0.21 | cuda | 200 | Week 1 gate, raised learning rate (protocol A.4 failure response step 1). |
+| `gatehi_pmnist_w500_sgd_lr0p1_s3` | `035eda78e4271ee4` | 2026-08-06 | complete | 0.21 | cuda | 200 | Week 1 gate, raised learning rate (protocol A.4 failure response step 1). |
+| `gatehi_pmnist_w500_sgd_lr0p1_s4` | `bf9fdca7f16c15fa` | 2026-08-06 | complete | 0.20 | cuda | 200 | Week 1 gate, raised learning rate (protocol A.4 failure response step 1). |
 
-**Total: 15 runs, 3.43 GPU-hours.**
+**Total: 25 runs, 5.53 GPU-hours.**
 
 ## Session notes
 
@@ -51,3 +61,34 @@ duplicate runs already banked.
 Operational cause and fix: the code Dataset must be rebuilt with
 `python scripts/package_for_kaggle.py` after any config change, and the notebook
 must be taken from `notebooks/` rather than from a previous session's copy.
+
+### 2026-08-05 — Kaggle session 3: gate_hi. **GATE PASSED**
+
+10 runs (lr ∈ {0.03, 0.1} × 5 seeds), 2.10 GPU-h, 0 failures.
+
+**lr=0.1 PASSES**: drop 4.54 pp [4.45, 4.69] against the ≥3 pp criterion;
+`dead_exact` 4.8% → 20.5%, Spearman ρ=0.90 [0.86, 0.92]. lr=0.03 missed at
+2.68 pp [2.45, 2.84]. §B.1 uses **lr=0.1**.
+
+Checked before accepting the pass, since a diverged run can fake a drop: no NaN,
+max mean-task-loss 0.472, min online accuracy 0.8505, peak 0.9304 at task 1, and
+held-out probe accuracy falls 95.88% → 93.77% independently. No layer is wholly
+dead (max 27.9%), so the `sokar_scores` 0/0 degenerate case is not driving the
+dormancy counts. The regime is healthy.
+
+Cumulative: **5.53 / 40 GPU-h** for weeks 1–2 (3.43 gate + 2.10 gate_hi). The
+3.18 h duplicate session is excluded.
+
+**Budget problem for §B.1, needs a decision before launching.** The protocol
+budgeted 13 GPU-h for the τ-sweep assuming 4 min/run. Measured cost is
+12.75 min/run, so 190 runs is **~40 GPU-h** — 3.1× over plan, more than the
+entire 13 h buffer, and spanning two 30 GPU-h weekly quotas. The seed count (10)
+is frozen and must not be cut; the adjustable dimension is scope, not
+statistics. Cheapest partial order:
+
+- `none` + `redo` × 6 τ = 70 runs, ~15 GPU-h — answers the untested assumption
+  (does ReDo help at all?) and yields the composition table.
+- `+ random_matched` × 6 τ = 60 runs, ~13 GPU-h — the actual C1 control.
+- `+ inverse_matched` × 6 τ = 60 runs, ~13 GPU-h — a sanity check replicating
+  Sokar Fig. 15; arguably needs 1–2 τ values, not 6. Trimming it is a scope
+  deviation and belongs in `configs/DEVIATIONS.md` if taken.
