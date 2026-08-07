@@ -804,31 +804,49 @@ def fig_c5_optimizers(ex: Extracts, out: Path, lr: Optional[float] = None) -> Op
     """
     intra, metrics = ex.table("intra_task"), ex.table("metrics")
     runs = ex.runs[ex.runs.run_id.str.startswith("c5_")]
-    if runs.empty or intra.empty:
+    if runs.empty:
         return None
     runs = runs.assign(_arm=[_arm_from_run_id(r, "c5_") for r in runs.run_id])
     arms = sorted(runs._arm.unique())
     colours = {a: c for a, c in zip(arms, [MUTED] + SLOT)}
 
-    fig, (ax_step, ax_task) = plt.subplots(1, 2, figsize=(7.2, 2.9))
-    it = intra.merge(runs[["run_id", "_arm"]], on="run_id", how="inner")
-    # Tasks 50+ only: the first tasks are still in the initial transient, where
-    # every arm's death count is moving for reasons that have nothing to do with
-    # distance from a switch.
-    late = it[it.task_idx >= 50]
-    for arm in arms:
-        g = late[late._arm == arm].groupby("step_in_task").dead_exact_frac.mean() * 100
-        if g.empty:
-            continue
-        ax_step.plot(g.index, g.values, color=colours[arm], lw=1.8)
-        ax_step.annotate(arm.replace("_", " "), xy=(g.index[-1], g.values[-1]),
-                         xytext=(4, 0), textcoords="offset points", va="center",
-                         fontsize=7.5, color=colours[arm], fontweight="semibold")
-    ax_step.set_xlabel("optimizer steps since the task switch")
-    ax_step.set_ylabel("% dead_exact")
-    ax_step.set_title("(a) within a task: the predicted spike", loc="left",
-                      fontsize=8.5, color=INK_2)
-    _grid(ax_step)
+    # The within-task panel needs `intra_task.parquet`, which the first C5
+    # extract omitted (the `EXTRACT_TABLES` bug, since fixed and pinned by
+    # `test_train.py::test_intra_task_table_is_in_the_analysis_extract`). Draw
+    # the cross-task panel alone rather than nothing, and say which panel is
+    # absent -- the missing one is the *pre-registered prediction*, so silently
+    # shipping only the panel that worked would be exactly the wrong failure.
+    has_intra = not intra.empty
+    if not has_intra:
+        print("    fig_c5_optimizers: no intra_task.parquet in this extract, so "
+              "panel (a) -- the pre-registered within-task spike -- is NOT drawn. "
+              "Re-extract from the archival runs.zip to restore it.")
+    fig, axes = plt.subplots(1, 2 if has_intra else 1,
+                             figsize=(7.2 if has_intra else 4.0, 2.9))
+    axes = np.atleast_1d(axes)
+    ax_task = axes[-1]
+
+    if has_intra:
+        ax_step = axes[0]
+        it = intra.merge(runs[["run_id", "_arm"]], on="run_id", how="inner")
+        # Tasks 50+ only: the first tasks are still in the initial transient,
+        # where every arm's death count is moving for reasons that have nothing
+        # to do with distance from a switch.
+        late = it[it.task_idx >= 50]
+        for arm in arms:
+            g = late[late._arm == arm].groupby("step_in_task").dead_exact_frac.mean() * 100
+            if g.empty:
+                continue
+            ax_step.plot(g.index, g.values, color=colours[arm], lw=1.8)
+            ax_step.annotate(arm.replace("_", " "), xy=(g.index[-1], g.values[-1]),
+                             xytext=(4, 0), textcoords="offset points", va="center",
+                             fontsize=7.5, color=colours[arm], fontweight="semibold")
+        ax_step.set_xlabel("optimizer steps since the task switch")
+        ax_step.set_ylabel("% dead_exact")
+        ax_step.set_title("(a) within a task: the predicted spike", loc="left",
+                          fontsize=8.5, color=INK_2)
+        _grid(ax_step)
+        ax_step.margins(x=0.22)
 
     m = metrics[metrics.probe_point == "task_end"].merge(
         runs[["run_id", "_arm"]], on="run_id", how="inner"
