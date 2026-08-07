@@ -356,12 +356,10 @@ DEFINITIONS = [
         ["dormant_frac_tau_0p1_ref"],
         ["dormant_frac_tau_0_ref", "dormant_frac_tau_0p25_ref"],
     ),
-    (
-        "dead_absolute  (ours)",
-        SLOT[2],
-        ["dead_abs_frac_1em02_ref"],
-        ["dead_abs_frac_1em06_ref", "dead_abs_frac_1em02_ref"],
-    ),
+    # No family band for dead_absolute: its a=1e-6 member lands exactly on
+    # dead_exact (which is the sanity check that both are implemented right, and
+    # is reported in the text), so drawing it here just doubles the blue line.
+    ("dead_absolute  (ours)", SLOT[2], ["dead_abs_frac_1em02_ref"], None),
 ]
 
 
@@ -568,7 +566,8 @@ def fig_c4_recurrence(surv: Dict[str, pd.DataFrame], out: Path) -> Optional[Path
     ax_hist.axvline(obs.mean(), color=INK_2, lw=1.2, ls=(0, (4, 2)), zorder=4)
     ax_hist.annotate(
         f"mean {obs.mean():.0f}", xy=(obs.mean(), 0.99), xycoords=("data", "axes fraction"),
-        xytext=(4, -2), textcoords="offset points", fontsize=7.5, color=INK_2, va="top",
+        xytext=(-4, -2), textcoords="offset points", fontsize=7.5, color=INK_2,
+        va="top", ha="right",
     )
     # The null holds the per-task, per-layer dose fixed and redraws only *which*
     # units, so any excess concentration is targeting, not dose.
@@ -583,8 +582,11 @@ def fig_c4_recurrence(surv: Dict[str, pd.DataFrame], out: Path) -> Optional[Path
             "and it leaves no unit untouched",
         ]
     ax_hist.annotate(
-        "\n".join(lines), xy=(0.30, 0.86), xycoords="axes fraction",
-        fontsize=7.5, color=INK_2, va="top", linespacing=1.45,
+        "\n".join(lines), xy=(0.97, 0.88), xycoords="axes fraction",
+        fontsize=7.5, color=INK_2, va="top", ha="right", linespacing=1.45,
+        # The block spans the mean line; a surface-coloured plate keeps both
+        # readable instead of interleaving text with a dashed rule.
+        bbox=dict(facecolor=SURFACE, edgecolor="none", alpha=0.94, pad=3.0),
     )
     ax_hist.set_xlabel("times a unit was recycled")
     ax_hist.set_ylabel("density of units")
