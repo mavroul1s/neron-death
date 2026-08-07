@@ -138,6 +138,23 @@ def test_intra_task_probing_samples_the_grid_after_each_switch(
     assert t["step"] == sorted(t["step"])
 
 
+def test_intra_task_table_is_in_the_analysis_extract():
+    """The C5 measurement must survive the trip off Kaggle.
+
+    Regression test: the first C5 session produced 20 runs of intra-task probes
+    and an extract containing none of them, because this table was missing from
+    EXTRACT_TABLES. The runs were fine; the download was useless.
+    """
+    import sys
+
+    sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "scripts"))
+    from make_analysis_extract import EXTRACT_TABLES
+
+    assert "intra_task" in EXTRACT_TABLES
+    for essential in ("tasks", "metrics", "recycling"):
+        assert essential in EXTRACT_TABLES
+
+
 def test_resume_refuses_a_different_config(tiny_mnist_root, tmp_path):
     """CLAUDE.md §7: a changed hyperparameter is a new run_id, not an edit."""
     runs = tmp_path / "runs"

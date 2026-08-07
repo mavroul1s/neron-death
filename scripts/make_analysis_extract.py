@@ -38,7 +38,13 @@ import pyarrow.parquet as pq
 
 #: Everything except the per-neuron log. Adding `neurons` here would defeat the
 #: entire point of the script.
-EXTRACT_TABLES = ("tasks", "metrics", "recycling")
+#:
+#: `intra_task` is small (only ~11k rows per run, and empty unless
+#: `probe.intra_task_probe_every` is set) but it is the ENTIRE C5 measurement --
+#: the post-task-switch death spike cannot be seen at task-boundary resolution.
+#: It was omitted from the first version of this list, which meant the first C5
+#: session's extract had no C5 data in it. Do not remove it again.
+EXTRACT_TABLES = ("tasks", "metrics", "recycling", "intra_task")
 
 #: The C4 subset of `neurons.parquet` (CLAUDE.md §5.4, claim C4).
 #:
