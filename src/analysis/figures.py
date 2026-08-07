@@ -756,8 +756,11 @@ def fig_c3_anomaly(ex: Extracts, out: Path, lr: float = 0.1) -> Optional[Path]:
     Arms are direct-labelled rather than coloured: a scatter needs the all-pairs
     palette gate, which caps categorical hues at three, and there are seven arms.
     """
-    runs = ex.select(arm="none", lr=lr)
-    runs = runs[runs.run_id.str.startswith("c3_")]
+    # By run_id prefix, not `select`: the C3 arms differ in fields that are not
+    # one config key (an L2 lambda, a shrink-and-perturb flag), so `arm` is
+    # "none" for all seven and a metadata filter cannot separate them from the
+    # gate's no-intervention runs.
+    runs = ex.runs[ex.runs.run_id.str.startswith("c3_") & (ex.runs.lr == lr)]
     if runs.empty:
         return None
     pts = _arm_points(ex, runs, "c3_")
@@ -852,14 +855,46 @@ def fig_c5_optimizers(ex: Extracts, out: Path, lr: Optional[float] = None) -> Op
 # -- Figure 9: Setting 3, the definitions depend on the activation ------------
 
 
-def fig_setting3_activations(ex: Extracts, out: Path, lr: float = 0.1) -> Optional[Path]:
+def fig_setting3_activations(
+    ex: Extracts,
+    out: Path,
+    lr: float = 0.1,
+    tanh_lr: Optional[float] = None,
+    chance_margin_pp: float = 5.0,
+) -> Optional[Path]:
     """The strongest single C2 demonstration: change the activation, and the
     field's standard definition stops finding anything while the others do not.
+
+    ``tanh_lr`` swaps the tanh row for the calibrated runs from
+    `configs/setting3_tanh_gate` once that gate has been decided. Until it is
+    passed, a tanh arm that diverged is **dropped, not drawn** -- at lr=0.1 tanh
+    reached 10.05%, which is chance for ten classes, and its death metrics are
+    meaningless. Plotting it would put a failed arm in a table as though it were
+    a result (CLAUDE.md §11 says explicitly not to).
     """
-    metrics = ex.table("metrics")
-    runs = ex.runs[ex.runs.run_id.str.startswith("s3_")]
+    metrics, tasks = ex.table("metrics"), ex.table("tasks")
+    runs = ex.runs[ex.runs.run_id.str.startswith("s3_") & (ex.runs.lr == lr)]
+    if tanh_lr is not None:
+        gate_runs = ex.runs[
+            ex.runs.run_id.str.startswith("s3tanh_") & (ex.runs.lr == tanh_lr)
+        ]
+        runs = pd.concat([runs[runs.activation != "tanh"], gate_runs], ignore_index=True)
     if runs.empty or metrics.empty:
         return None
+
+    chance_pp = 100.0 / 10  # ten classes
+    kept, dropped = [], []
+    for act, g in runs.groupby("activation"):
+        acc, _, _ = _estimate(_score_matrix(tasks, g.run_id, ex.window_late), ex.plan)
+        (kept if acc * 100 > chance_pp + chance_margin_pp else dropped).append(act)
+    if dropped:
+        print(f"    fig_setting3_activations: dropped {', '.join(sorted(dropped))} "
+              f"-- at or near chance ({chance_pp:.0f}%), so the death metrics are "
+              "meaningless; calibrate its learning rate and pass tanh_lr")
+    runs = runs[runs.activation.isin(kept)]
+    if runs.empty:
+        return None
+
     m = metrics[
         metrics.run_id.isin(runs.run_id) & (metrics.probe_point == "task_end")
         & (metrics.task_idx.isin(ex.window_late))
