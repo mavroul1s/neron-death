@@ -165,11 +165,19 @@ class Extracts:
         }
 
     def table(self, name: str) -> pd.DataFrame:
-        """A table joined to the run metadata, so every figure can filter by arm."""
+        """A table joined to the run metadata, so every figure can filter by arm.
+
+        Columns the table already carries win. `recycling.parquet` writes its own
+        `arm` and `tau` -- the values in force at the event -- and pandas would
+        otherwise suffix them to `tau_x`/`tau_y`, which every downstream groupby
+        then gets wrong in a way that only shows up as a KeyError if you are
+        lucky.
+        """
         df = self._tables.get(name)
         if df is None:
             return pd.DataFrame()
-        return df.merge(self.runs, on="run_id", how="left")
+        extra = [c for c in self.runs.columns if c == "run_id" or c not in df.columns]
+        return df.merge(self.runs[extra], on="run_id", how="left")
 
     @property
     def window_late(self) -> List[int]:
@@ -329,7 +337,8 @@ def fig_tau_sweep(ex: Extracts, out: Path) -> Optional[Path]:
     ax_dead.set_ylim(bottom=0)
     for a in (ax_acc, ax_dead):
         _grid(a)
-        a.margins(x=0.16)
+        # Room on the right for the direct labels, which sit outside the data.
+        a.set_xlim(-0.012, 0.335)
     return _save(fig, out, "fig1_tau_sweep")
 
 
@@ -378,9 +387,14 @@ def fig_c2_definitions(
         for label, colour, main, band in DEFINITIONS:
             series = ml.groupby("task_idx")[main[0]].mean() * 100
             if band:
-                lo = ml.groupby("task_idx")[band[0]].mean() * 100
-                hi = ml.groupby("task_idx")[band[1]].mean() * 100
-                ax.fill_between(series.index, lo, hi, color=colour, alpha=0.16, lw=0)
+                # Hairlines, not a fill. Both families span most of the axis, so
+                # three translucent regions stacked on each other reduce the
+                # panel to mud -- and the point of the figure is that the lines
+                # are far apart.
+                for col in band:
+                    ax.plot(ml.groupby("task_idx")[col].mean().index,
+                            ml.groupby("task_idx")[col].mean().values * 100,
+                            color=colour, lw=0.7, ls=(0, (2, 2)), alpha=0.75)
             ax.plot(series.index, series.values, color=colour, lw=1.8,
                     label=label if lyr == layers[0] else None)
         ax.set_title(f"hidden layer {lyr}", loc="left", color=INK_2, fontsize=8.5)
@@ -401,8 +415,33 @@ def fig_c2_definitions(
 # -- Figure 3: C4, mortality is reversible ------------------------------------
 
 
+def _no_intervention_runs(
+    surv: Dict[str, pd.DataFrame], ex: Optional[Extracts], lr: Optional[float]
+) -> List[str]:
+    """Run ids in `surv` where nothing was ever recycled, at one learning rate.
+
+    Panel (b) is captioned "recovery without intervention", so it has to come
+    from runs that had none -- a recycled unit is alive again by construction and
+    would be counted as a spontaneous recovery. The learning-rate filter matters
+    for the same kind of reason: the gate sweep spans two decades of step size
+    and pooling them would draw one curve through five different regimes.
+    """
+    rc = surv.get("recurrence")
+    if rc is None or rc.empty:
+        return []
+    totals = rc.groupby("run_id").n_recycled.sum()
+    ids = [str(r) for r in totals[totals == 0].index]
+    if ex is not None and lr is not None and not ex.runs.empty:
+        by_lr = ex.runs.set_index("run_id").lr.to_dict()
+        ids = [r for r in ids if by_lr.get(r) == lr]
+    return ids
+
+
 def fig_c4_survival(
-    surv: Dict[str, pd.DataFrame], out: Path, lr: Optional[float] = None
+    surv: Dict[str, pd.DataFrame],
+    out: Path,
+    ex: Optional[Extracts] = None,
+    lr: Optional[float] = 0.1,
 ) -> Optional[Path]:
     """Death is a state units churn through, not a fate they arrive at.
 
@@ -411,9 +450,18 @@ def fig_c4_survival(
     batches -- the gap between them is how much of "recovery" is really the
     input distribution moving. Right: how long an episode of silence lasts.
     """
+    keep = _no_intervention_runs(surv, ex, lr)
+    if not keep:
+        return None
     tr, ep = surv.get("transitions"), surv.get("episodes")
     km_cur, km_ref = surv.get("survival_matrix_current"), surv.get("survival_matrix_reference")
     if tr is None or tr.empty or km_ref is None:
+        return None
+    tr = tr[tr.run_id.isin(keep)]
+    ep = None if ep is None else ep[ep.run_id.isin(keep)]
+    km_ref = km_ref.loc[km_ref.index.isin(keep)]
+    km_cur = None if km_cur is None else km_cur.loc[km_cur.index.isin(keep)]
+    if tr.empty or km_ref.empty:
         return None
 
     fig, (ax_km, ax_rec, ax_ep) = plt.subplots(1, 3, figsize=(8.6, 2.8))
@@ -461,7 +509,10 @@ def fig_c4_survival(
     ax_rec.set_xticks(xs, [f"layer {l}" for l in layers])
     ax_rec.set_ylabel("% of dead units alive\none task later")
     ax_rec.set_title("(b) recovery without intervention", loc="left", fontsize=8.5, color=INK_2)
-    ax_rec.legend(loc="upper left", bbox_to_anchor=(0, 1.02))
+    # Above the plot area: inside, it lands on the tallest bar.
+    ax_rec.legend(loc="lower left", bbox_to_anchor=(0, 1.10), ncol=2,
+                  columnspacing=1.2, handlelength=1.4)
+    ax_rec.set_ylim(0, max(g.p) * 1.18)
     _grid(ax_rec)
 
     # -- (c) episode length ECDF, reference batch
@@ -650,8 +701,7 @@ def fig_reference_asymmetry(
 
 def build_all(
     extracts_root="runs/_extracts",
-    survival_dir: Optional[str] = None,
-    runs_root: Optional[str] = None,
+    survival_dirs: Optional[Sequence[str]] = None,
     out="figures",
 ) -> List[Path]:
     use_paper_style()
@@ -677,15 +727,15 @@ def build_all(
         if path:
             made.append(path)
 
-    if survival_dir:
-        surv = {
-            p.stem: pd.read_parquet(p) for p in sorted(Path(survival_dir).glob("*.parquet"))
-        }
-        for fn in (fig_c4_survival, fig_c4_recurrence):
-            path = fn(surv, out)
-            print(f"  {'wrote' if path else 'skipped'} {fn.__name__}"
-                  + (f" -> {path.name}" if path else " (no data)"))
+    # Several survival directories may be given: the C4 mortality figure needs
+    # runs with no intervention, the recurrence figure needs runs with one, and
+    # no single sweep supplies both.
+    for d in survival_dirs or []:
+        surv = {p.stem: pd.read_parquet(p) for p in sorted(Path(d).glob("*.parquet"))}
+        for fn, kwargs in ((fig_c4_survival, {"ex": ex}), (fig_c4_recurrence, {})):
+            path = fn(surv, out, **kwargs)
             if path:
+                print(f"  wrote {fn.__name__} -> {path.name}   [{Path(d).name}]")
                 made.append(path)
     return made
 
@@ -693,8 +743,8 @@ def build_all(
 def main(argv=None) -> int:
     ap = argparse.ArgumentParser(description="Build the paper's figures.")
     ap.add_argument("--extracts", default="runs/_extracts")
-    ap.add_argument("--survival", default=None,
-                    help="directory written by `python -m src.analysis.survival --out`")
+    ap.add_argument("--survival", nargs="*", default=[],
+                    help="directories written by `python -m src.analysis.survival --out`")
     ap.add_argument("--out", default="figures")
     args = ap.parse_args(argv)
     build_all(args.extracts, args.survival, out=args.out)
