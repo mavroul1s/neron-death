@@ -710,6 +710,246 @@ def fig_reference_asymmetry(
     return _save(fig, out, "fig6_reference_asymmetry")
 
 
+# -- Figure 7: C3, the anomalies ---------------------------------------------
+
+
+def _arm_from_run_id(run_id: str, prefix: str) -> str:
+    """Arm name out of a run_id like `c3_l2_1em3_lr0p1_s2`.
+
+    C3 and C5 vary the arm through fields that are not one config key -- an L2
+    lambda, an optimizer's eps and beta2, a shrink-and-perturb flag -- so unlike
+    the tau sweep there is no single column to group by. The run_id is
+    constructed by `scripts/make_configs.py` and is the only place the arm is
+    named as a unit.
+    """
+    stem = run_id[len(prefix):] if run_id.startswith(prefix) else run_id
+    return stem.rsplit("_lr", 1)[0]
+
+
+def _arm_points(
+    ex: Extracts, runs: pd.DataFrame, prefix: str
+) -> List[Tuple[str, float, float, float, float]]:
+    """(arm, accuracy, ci_lo, ci_hi, dead_exact) per arm, late window."""
+    tasks, metrics = ex.table("tasks"), ex.table("metrics")
+    out = []
+    runs = runs.assign(_arm=[_arm_from_run_id(r, prefix) for r in runs.run_id])
+    for arm, g in runs.groupby("_arm"):
+        acc, lo, hi = _estimate(_score_matrix(tasks, g.run_id, ex.window_late), ex.plan)
+        m = metrics[
+            metrics.run_id.isin(g.run_id)
+            & (metrics.probe_point == "task_end")
+            & (metrics.task_idx.isin(ex.window_late))
+        ]
+        out.append((arm, acc * 100, lo * 100, hi * 100, m.dead_exact_frac_ref.mean() * 100))
+    return sorted(out, key=lambda r: r[4])
+
+
+def fig_c3_anomaly(ex: Extracts, out: Path, lr: float = 0.1) -> Optional[Path]:
+    """C3: plasticity and dead units move *independently*.
+
+    Plotted as accuracy against dead-unit count, one point per arm, because the
+    claim is a dissociation and a dissociation is a two-dimensional statement.
+    Two bar charts side by side would let a reader match arms up by eye and get
+    the same information, but the point -- that arms sit up and to the *right*,
+    better and deader -- only becomes obvious in the plane.
+
+    Arms are direct-labelled rather than coloured: a scatter needs the all-pairs
+    palette gate, which caps categorical hues at three, and there are seven arms.
+    """
+    runs = ex.select(arm="none", lr=lr)
+    runs = runs[runs.run_id.str.startswith("c3_")]
+    if runs.empty:
+        return None
+    pts = _arm_points(ex, runs, "c3_")
+    baseline = next((p for p in pts if "backprop" in p[0]), None)
+
+    fig, ax = plt.subplots(figsize=(5.4, 3.6))
+    for arm, acc, lo, hi, dead in pts:
+        is_base = baseline is not None and arm == baseline[0]
+        colour = MUTED if is_base else SLOT[0]
+        ax.errorbar(dead, acc, yerr=[[acc - lo], [hi - acc]], fmt="o", color=colour,
+                    ecolor=colour, elinewidth=1.2, capsize=2.5, zorder=4,
+                    markeredgecolor=SURFACE, markeredgewidth=1.0)
+        ax.annotate(arm.replace("_", " "), xy=(dead, acc), xytext=(6, 3),
+                    textcoords="offset points", fontsize=7.5,
+                    color=INK_2 if not is_base else MUTED,
+                    fontweight="semibold" if not is_base else "normal")
+    if baseline is not None:
+        ax.axhline(baseline[1], color=MUTED, lw=1.0, ls=(0, (4, 2)), zorder=2)
+        ax.axvline(baseline[4], color=MUTED, lw=1.0, ls=(0, (4, 2)), zorder=2)
+        ax.annotate("plain backprop", xy=(0.015, baseline[1]),
+                    xycoords=("axes fraction", "data"), xytext=(0, 4),
+                    textcoords="offset points", fontsize=7.5, color=MUTED)
+    ax.set_xlabel("% dead_exact, late window (reference batch)")
+    ax.set_ylabel("late-window online accuracy (%)")
+    ax.set_title("Anything up and to the right is better AND deader", loc="left")
+    _grid(ax, axis="both")
+    ax.margins(0.14)
+    return _save(fig, out, "fig7_c3_anomaly")
+
+
+# -- Figure 8: C5, optimizers -------------------------------------------------
+
+
+def fig_c5_optimizers(ex: Extracts, out: Path, lr: Optional[float] = None) -> Optional[Path]:
+    """C5: Adam's death accumulates *across* tasks, not in a spike after each one.
+
+    Left panel is the pre-registered prediction, drawn on the grid it was
+    predicted on (steps since the task switch). Right panel is what actually
+    carries the effect. Reporting only the right panel would hide a failed
+    prediction; reporting only the left would hide a real result.
+    """
+    intra, metrics = ex.table("intra_task"), ex.table("metrics")
+    runs = ex.runs[ex.runs.run_id.str.startswith("c5_")]
+    if runs.empty or intra.empty:
+        return None
+    runs = runs.assign(_arm=[_arm_from_run_id(r, "c5_") for r in runs.run_id])
+    arms = sorted(runs._arm.unique())
+    colours = {a: c for a, c in zip(arms, [MUTED] + SLOT)}
+
+    fig, (ax_step, ax_task) = plt.subplots(1, 2, figsize=(7.2, 2.9))
+    it = intra.merge(runs[["run_id", "_arm"]], on="run_id", how="inner")
+    # Tasks 50+ only: the first tasks are still in the initial transient, where
+    # every arm's death count is moving for reasons that have nothing to do with
+    # distance from a switch.
+    late = it[it.task_idx >= 50]
+    for arm in arms:
+        g = late[late._arm == arm].groupby("step_in_task").dead_exact_frac.mean() * 100
+        if g.empty:
+            continue
+        ax_step.plot(g.index, g.values, color=colours[arm], lw=1.8)
+        ax_step.annotate(arm.replace("_", " "), xy=(g.index[-1], g.values[-1]),
+                         xytext=(4, 0), textcoords="offset points", va="center",
+                         fontsize=7.5, color=colours[arm], fontweight="semibold")
+    ax_step.set_xlabel("optimizer steps since the task switch")
+    ax_step.set_ylabel("% dead_exact")
+    ax_step.set_title("(a) within a task: the predicted spike", loc="left",
+                      fontsize=8.5, color=INK_2)
+    _grid(ax_step)
+
+    m = metrics[metrics.probe_point == "task_end"].merge(
+        runs[["run_id", "_arm"]], on="run_id", how="inner"
+    )
+    for arm in arms:
+        g = m[m._arm == arm].groupby("task_idx").dead_exact_frac_ref.mean() * 100
+        if g.empty:
+            continue
+        ax_task.plot(g.index, g.values, color=colours[arm], lw=1.8)
+        ax_task.annotate(arm.replace("_", " "), xy=(g.index[-1], g.values[-1]),
+                         xytext=(4, 0), textcoords="offset points", va="center",
+                         fontsize=7.5, color=colours[arm], fontweight="semibold")
+    ax_task.set_xlabel("task")
+    ax_task.set_ylabel("% dead_exact")
+    ax_task.set_title("(b) across tasks: where it actually accumulates", loc="left",
+                      fontsize=8.5, color=INK_2)
+    _grid(ax_task)
+    for a in (ax_step, ax_task):
+        a.margins(x=0.22)
+    fig.tight_layout()
+    return _save(fig, out, "fig8_c5_optimizers")
+
+
+# -- Figure 9: Setting 3, the definitions depend on the activation ------------
+
+
+def fig_setting3_activations(ex: Extracts, out: Path, lr: float = 0.1) -> Optional[Path]:
+    """The strongest single C2 demonstration: change the activation, and the
+    field's standard definition stops finding anything while the others do not.
+    """
+    metrics = ex.table("metrics")
+    runs = ex.runs[ex.runs.run_id.str.startswith("s3_")]
+    if runs.empty or metrics.empty:
+        return None
+    m = metrics[
+        metrics.run_id.isin(runs.run_id) & (metrics.probe_point == "task_end")
+        & (metrics.task_idx.isin(ex.window_late))
+    ].merge(runs[["run_id", "activation"]], on="run_id", how="inner")
+    if m.empty:
+        return None
+
+    cols = [
+        ("dead_exact  (Dohare et al.)", SLOT[0], "dead_exact_frac_ref"),
+        (r"dormant $\tau$=0.1  (Sokar et al.)", SLOT[1], "dormant_frac_tau_0p1_ref"),
+        ("dead_absolute a=1e-2  (ours)", SLOT[2], "dead_abs_frac_1em02_ref"),
+    ]
+    acts = [a for a in ("relu", "leaky_relu", "gelu", "silu", "tanh")
+            if a in set(m.activation)]
+    xs = np.arange(len(acts))
+    width = 0.26
+
+    fig, ax = plt.subplots(figsize=(6.2, 3.0))
+    for i, (label, colour, col) in enumerate(cols):
+        vals = [m[m.activation == a][col].mean() * 100 for a in acts]
+        pos = xs + (i - 1) * (width + 0.02)
+        ax.bar(pos, vals, width, color=colour, label=label, zorder=3,
+               edgecolor=SURFACE, linewidth=1.0)
+        for x, v in zip(pos, vals):
+            # A zero bar is invisible, and "exactly zero" is the whole finding.
+            ax.annotate("0" if v == 0 else f"{v:.0f}", (x, v), xytext=(0, 2),
+                        textcoords="offset points", ha="center", fontsize=7,
+                        color=INK if v == 0 else INK_2,
+                        fontweight="semibold" if v == 0 else "normal")
+    ax.set_xticks(xs, [a.replace("_", "-") for a in acts])
+    ax.set_ylabel("% of units flagged, late window")
+    ax.set_title("Under GELU and SiLU the Nature paper's definition finds nothing",
+                 loc="left")
+    ax.legend(loc="lower left", bbox_to_anchor=(0, 1.06), ncol=3,
+              columnspacing=1.2, handlelength=1.4)
+    _grid(ax)
+    return _save(fig, out, "fig9_setting3_activations")
+
+
+# -- Figure 10: Setting 2, the unit is a channel ------------------------------
+
+
+def fig_setting2_channels(ex: Extracts, out: Path) -> Optional[Path]:
+    """In a conv layer `dead_exact` finds ~nothing while most of the feature map
+    is silent -- the failure CLAUDE.md §5.5 predicted, measured.
+    """
+    metrics = ex.table("metrics")
+    runs = ex.runs[ex.runs.dataset == "label_shuffled_cifar10"]
+    if runs.empty or metrics.empty:
+        return None
+    base = runs[runs.arm == "none"]
+    m = metrics[
+        metrics.run_id.isin(base.run_id) & (metrics.probe_point == "task_end")
+    ]
+    if m.empty:
+        return None
+    # The late window is a 200-task window; Setting 2 may be shorter, so use its
+    # own last fifth rather than silently comparing different points in training.
+    cutoff = m.task_idx.max() - max(1, (m.task_idx.max() + 1) // 5)
+    m = m[m.task_idx > cutoff]
+    layers = sorted(m.layer_idx.unique())
+
+    cols = [
+        ("dead_exact (whole channel)", SLOT[0], "dead_exact_frac_ref"),
+        ("spatially silent positions", SLOT[1], "mean_frac_zero_positions_ref"),
+        (r"dormant $\tau$=0.1", SLOT[2], "dormant_frac_tau_0p1_ref"),
+    ]
+    xs = np.arange(len(layers))
+    width = 0.26
+    fig, ax = plt.subplots(figsize=(5.8, 3.0))
+    for i, (label, colour, col) in enumerate(cols):
+        vals = [m[m.layer_idx == l][col].mean() * 100 for l in layers]
+        pos = xs + (i - 1) * (width + 0.02)
+        ax.bar(pos, vals, width, color=colour, label=label, zorder=3,
+               edgecolor=SURFACE, linewidth=1.0)
+        for x, v in zip(pos, vals):
+            ax.annotate(f"{v:.0f}" if v >= 0.5 else f"{v:.2f}", (x, v),
+                        xytext=(0, 2), textcoords="offset points", ha="center",
+                        fontsize=7, color=INK_2)
+    spatial = m.groupby("layer_idx").is_spatial.first()
+    ax.set_xticks(xs, [f"layer {l}\n{'conv' if spatial.get(l, False) else 'fc'}"
+                       for l in layers])
+    ax.set_ylabel("% flagged, last fifth of training")
+    ax.set_title("A channel can be 88% silent and still count as alive", loc="left")
+    ax.legend(loc="lower left", bbox_to_anchor=(0, 1.06), ncol=3,
+              columnspacing=1.2, handlelength=1.4)
+    _grid(ax)
+    return _save(fig, out, "fig10_setting2_channels")
+
+
 # -- driver -------------------------------------------------------------------
 
 
@@ -729,15 +969,19 @@ def build_all(
     if absent:
         print(f"MISSING ARMS, figures below are drawn without them: {', '.join(absent)}")
 
-    for fn, args in [
-        (fig_tau_sweep, (ex, out)),
-        (fig_c2_definitions, (ex, out)),
-        (fig_gate_dose_response, (ex, out)),
-        (fig_reference_asymmetry, (ex, out)),
-    ]:
-        path = fn(*args)
+    for fn in (
+        fig_tau_sweep,
+        fig_c2_definitions,
+        fig_gate_dose_response,
+        fig_reference_asymmetry,
+        fig_c3_anomaly,
+        fig_c5_optimizers,
+        fig_setting3_activations,
+        fig_setting2_channels,
+    ):
+        path = fn(ex, out)
         print(f"  {'wrote' if path else 'skipped'} {fn.__name__}"
-              + (f" -> {path.name}" if path else " (no data)"))
+              + (f" -> {path.name}" if path else " (no extract for it yet)"))
         if path:
             made.append(path)
 
