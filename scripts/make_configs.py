@@ -164,9 +164,12 @@ def tau_sweep(lr: float) -> list:
 def c3_anomaly(lr: float) -> list:
     """§B.2 replication of Dohare et al. Fig. 4b with the C2 decomposition.
 
-    The `online-norm` arm is intentionally absent: `src/models.py` raises rather
-    than approximate Online Normalization (Chiley et al. 2019). Implement it
-    faithfully, then add it here.
+    The `online_norm` arm is now included: Online Normalization (Chiley et al.
+    2019) is implemented against the paper in `src/online_norm.py`, with its
+    backward control processes, rather than approximated.
+
+    This arm carries the more surprising half of C3 -- that a method *designed
+    to prevent* dead units *increases* them in later tasks.
     """
     out = []
     for seed in range(5):
@@ -177,6 +180,7 @@ def c3_anomaly(lr: float) -> list:
             "l2_1em2": {"l2": {"lambda": 1e-2}},
             "sp": {"shrink_perturb": {"enabled": True, "shrink": 0.5, "perturb": 0.01}},
             "dropout01": {"model": {"dropout": 0.1}},
+            "online_norm": {"model": {"norm": "online"}},
         }
         for name, over in variants.items():
             cfg = _base(f"c3_{name}_lr{lr:g}_s{seed}".replace(".", "p"), seed, lr)

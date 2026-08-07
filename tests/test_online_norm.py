@@ -201,5 +201,5 @@ def test_mlp_with_online_norm_trains():
         loss = torch.nn.functional.cross_entropy(model(x), y)
         loss.backward()
         opt.step()
-        first = first if first is not None else float(loss)
-    assert torch.isfinite(loss) and float(loss) < first
+        first = first if first is not None else float(loss.detach())
+    assert torch.isfinite(loss) and float(loss.detach()) < first
