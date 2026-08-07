@@ -105,6 +105,41 @@ JOBS = [
         ),
     },
     {
+        "name": "c3_anomaly",
+        "experiment": "c3",
+        "globs": ["*.json"],
+        "pattern": "c3_*",
+        "is_gate": False,
+        "runs": 30,
+        "hours": 3.2,
+        "why": (
+            "C3, the last untested claim: does L2 improve accuracy while "
+            "INCREASING dead units and decreasing effective rank? Replicates "
+            "Dohare et al. Fig. 4b with the C2 decomposition added, which is "
+            "what makes it new rather than a repeat. The `online_norm` arm is "
+            "absent -- src/models.py refuses to approximate Chiley et al. 2019 "
+            "-- so this covers backprop, L2 at three strengths, "
+            "shrink-and-perturb and dropout."
+        ),
+    },
+    {
+        "name": "setting3_tanh_gate",
+        "experiment": "setting3_tanh_gate",
+        "globs": ["*.json"],
+        "pattern": "s3tanh_*",
+        "is_gate": False,
+        "runs": 15,
+        "hours": 1.6,
+        "why": (
+            "Repairs the broken tanh row of Setting 3, which hit 10.05% -- "
+            "chance for ten classes -- because lr=0.1 was calibrated for ReLU "
+            "and tanh diverges there. Sweeps lr in {0.003, 0.01, 0.03}. Note "
+            "the comparability caveat in scripts/make_configs.py: tanh at its "
+            "own step size makes the Setting 3 table no longer single-setting, "
+            "and that has to be stated rather than glossed."
+        ),
+    },
+    {
         "name": "setting2_gate",
         "experiment": "setting2_gate",
         "globs": ["*.json"],
