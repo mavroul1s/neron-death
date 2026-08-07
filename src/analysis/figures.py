@@ -22,6 +22,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import re
 import sys
 from pathlib import Path
 from typing import Dict, List, Optional, Sequence, Tuple
@@ -723,7 +724,12 @@ def _arm_from_run_id(run_id: str, prefix: str) -> str:
     named as a unit.
     """
     stem = run_id[len(prefix):] if run_id.startswith(prefix) else run_id
-    return stem.rsplit("_lr", 1)[0]
+    # The seed suffix is always present; the `_lr...` segment is not -- C3 writes
+    # `c3_l2_1em3_lr0p1_s2` but C5 writes `c5_adam_lyle_s0`, because the C5 arms
+    # differ in optimizer hyperparameters rather than in learning rate. Strip the
+    # seed first, then the learning rate if there is one.
+    stem = re.sub(r"_s\d+$", "", stem)
+    return re.sub(r"_lr[0-9p.eE+-]+$", "", stem)
 
 
 def _arm_points(
