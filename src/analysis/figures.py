@@ -194,6 +194,33 @@ class Extracts:
             return []
         return [a for a in ARM_ORDER if a in set(self.runs.arm)]
 
+    def select(self, by: str = "seeds", **filters) -> pd.DataFrame:
+        """Matching runs, from **one** extract rather than pooled across them.
+
+        Extracts overlap: the reproduction gate and the tau sweep both contain a
+        no-intervention arm at lr=0.1, seeds 0-4, and the configs differ only in
+        fields added to the schema afterwards. Concatenating them would count
+        those five seeds twice and hand the bootstrap a correlation it assumes
+        away. Picking one sweep also keeps `n` constant along an axis.
+
+        ``by="seeds"`` takes the extract contributing the most runs (for a
+        single-condition figure); ``by="levels"`` takes the one spanning the most
+        learning rates (for a dose-response, which needs the whole ladder).
+        """
+        runs = self.runs
+        for key, value in filters.items():
+            if value is None:
+                continue
+            runs = runs[runs[key] == value]
+        if runs.empty or runs.extract.nunique() == 1:
+            return runs
+        score = (
+            runs.groupby("extract").lr.nunique()
+            if by == "levels"
+            else runs.groupby("extract").size()
+        )
+        return runs[runs.extract == score.idxmax()]
+
 
 def _score_matrix(tasks: pd.DataFrame, run_ids: Sequence[str], window: Sequence[int]) -> np.ndarray:
     """(n_runs, n_tasks) online accuracy, one row per seed -- the plan's shape."""
@@ -236,8 +263,11 @@ def fig_tau_sweep(ex: Extracts, out: Path) -> Optional[Path]:
     tasks, rec = ex.table("tasks"), ex.table("recycling")
     if tasks.empty:
         return None
-    runs = ex.runs[ex.runs.dataset == "permuted_mnist"]
-    interventions = [a for a in ex.arms_present() if a != "none"]
+    runs = pd.concat(
+        [ex.select(arm=a, lr=0.1, dataset="permuted_mnist") for a in ex.arms_present()],
+        ignore_index=True,
+    )
+    interventions = [a for a in ARM_ORDER if a != "none" and a in set(runs.arm)]
     if not interventions:
         return None
 
@@ -325,15 +355,16 @@ DEFINITIONS = [
 ]
 
 
-def fig_c2_definitions(ex: Extracts, out: Path, arm: str = "none") -> Optional[Path]:
+def fig_c2_definitions(
+    ex: Extracts, out: Path, arm: str = "none", lr: float = 0.1
+) -> Optional[Path]:
     """The same activations, four definitions, wildly different answers."""
     metrics = ex.table("metrics")
     if metrics.empty:
         return None
+    chosen = ex.select(arm=arm, lr=lr, dataset="permuted_mnist")
     m = metrics[
-        (metrics.arm == arm)
-        & (metrics.probe_point == "task_end")
-        & (metrics.dataset == "permuted_mnist")
+        metrics.run_id.isin(chosen.run_id) & (metrics.probe_point == "task_end")
     ]
     if m.empty:
         return None
@@ -570,7 +601,9 @@ def fig_gate_dose_response(ex: Extracts, out: Path) -> Optional[Path]:
 # -- Figure 6: death is partly distribution-relative --------------------------
 
 
-def fig_reference_asymmetry(ex: Extracts, out: Path, arm: str = "none") -> Optional[Path]:
+def fig_reference_asymmetry(
+    ex: Extracts, out: Path, arm: str = "none", lr: float = 0.1
+) -> Optional[Path]:
     """`dead_exact` on the current task against the fixed reference batch.
 
     None of the four source papers can see this: none of them probes a second,
