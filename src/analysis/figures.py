@@ -895,10 +895,12 @@ def fig_setting3_activations(
     if runs.empty:
         return None
 
+    # `ex.table` has already joined the run metadata, so `activation` is present;
+    # merging it again would produce activation_x / activation_y.
     m = metrics[
         metrics.run_id.isin(runs.run_id) & (metrics.probe_point == "task_end")
         & (metrics.task_idx.isin(ex.window_late))
-    ].merge(runs[["run_id", "activation"]], on="run_id", how="inner")
+    ]
     if m.empty:
         return None
 
