@@ -39,46 +39,87 @@ cosine schedule, which confounds *which* neurons are recycled with *how many*.
 
 ## Status
 
-**Week 1 complete. The reproduction gate FAILED. Week 2 has not started.**
+**Gate passed. The τ-sweep is complete. ~290 runs, ~57 GPU-hours.**
 
-The gate (protocol §A.4) requires a ≥3 pp accuracy drop from tasks 1–10 to 151–200 on
-200-task online permuted MNIST, plus a rise in dead units. 15 runs, 3 learning rates,
-5 seeds, 3.43 GPU-hours:
+The reproduction gate (protocol §A.4) passed at lr=0.1 — a 4.54 pp [4.45, 4.69]
+accuracy drop from tasks 1–10 to 151–200, with `dead_exact` rising 4.8% → 20.5%
+(Spearman ρ = 0.90). It failed at every smaller step size, monotonically, which is
+Dohare et al.'s own finding reproduced as a dose–response rather than at a point.
 
-| lr | accuracy drop | `dead_exact` (early → late) | Spearman ρ | verdict |
-|---|---:|---|---:|---|
-| 0.01 | **+1.33 pp** (need ≥ 3) | 0.28% → 7.63% | 0.96 | FAIL |
-| 0.003 | −0.25 pp | 0.98% → 3.76% | 0.90 | FAIL |
-| 0.001 | −1.18 pp | 1.80% → 4.76% | 0.91 | FAIL |
+### C1 — ReDo is not a resurrection method
 
-The dead-unit half of the gate passed at every learning rate; the accuracy half failed
-at every learning rate. The drop moves monotonically with step size, so the phenomenon
-is **present and under-driven, not absent**. Currently running the pre-specified
-failure response: raise the learning rate to {0.03, 0.1} (`configs/gate_hi/`).
+The full τ-sweep: 4 arms × 6 τ × 10 seeds. Late-window online accuracy, baseline
+`none` = 87.683%.
 
-The τ-sweep will not start until the gate passes. With no plasticity loss there is no
-ReDo benefit to decompose.
+| arm | what it recycles | dead share of it | Δ vs baseline |
+|---|---|---:|---:|
+| **ReDo** | the τ-dormant set | 12–31% | **+4.76 … +4.92 pp** |
+| **Random-matched** | k units at random | 8–13% | +4.32 … +4.39 pp |
+| **Inverse-matched** | the k *highest*-scoring | ~4% | +3.01 … +3.31 pp |
 
-### Preliminary, from the gate runs
+Random selection recovers ~90% of ReDo's benefit. Recycling the units *least* likely
+to be dead still buys +3 pp. In both controls the dose confound runs the wrong way —
+they recycle **more** units and do **worse** — so the ordering is not explained by
+perturbation volume.
 
-**C2 already looks large.** Same networks, same activations, tasks 151–200, lr=0.01:
+The pre-registered C1 prediction fired exactly: accuracy rises with τ while the
+truly-dead fraction of the recycled set falls (31.4% → 12.3%).
 
-| definition | flagged "dead" |
-|---|---:|
-| `dead_exact` — output exactly 0 on all 2048 probe inputs | 7.6% |
-| `dead_absolute` a=1e-2 | 47.4% |
-| `dormant τ=0.1` — Sokar's best-reported τ, what ReDo uses | **50.0%** |
-| `dormant τ=0.25` | 59.4% |
+**The strong form is refuted.** Targeting contributes ~10% (vs random) to ~35% (vs
+inverse). Report that, not "targeting is irrelevant".
 
-If ReDo(τ=0.1) ran on these networks it would recycle about half of all units, of which
-roughly 15% are genuinely dead. That is C1's headline claim visible before the
-intervention has been run — but it is a prior, not evidence. The composition table from
-the τ-sweep is the actual measurement.
+A finding about the published method: even at **τ=0** — supposedly "only provably dead
+units" — ReDo recycles 20% of the network, and **69% of that is alive**, because the
+score uses Sokar et al.'s 64-example default while `dead_exact` is measured on 2048.
 
-Also unexpected: `dead_exact` is *higher* on the fixed reference batch than on the
-current task's batch (12.7% vs 7.6%). Units stay alive for the permutation being
-trained on and go silent on a distribution the network has not seen recently, so
-"dead" is partly distribution-relative.
+### C2 — the definitions disagree, and one of them vanishes
+
+Four independent demonstrations:
+
+| setting | result |
+|---|---|
+| permuted MNIST, lr=0.1 | `dead_exact` 20.5% vs `dormant τ=0.1` **64.8%** — 3.2× on identical activations |
+| GELU / SiLU / LeakyReLU | `dead_exact` is **exactly 0.00%** while the others flag 1–20%. GELU has the **largest** plasticity drop (4.84 pp) — loss with no dead neurons by the *Nature* metric |
+| conv channels (CIFAR CNN) | `dead_exact` **0.00%** in conv layers while 81–88% of spatial positions are silent; the fc layer in the same net says 26% |
+| numerics | whether a GELU unit counts as dead depends on **float32 vs float64** |
+
+Also: `dead_exact` is *higher* on the fixed reference batch than on the current task's,
+and the gap is localised to the last hidden layer (20.8% vs 37.4%). Death is partly
+distribution-relative — a measurement none of the four source papers can make, because
+none uses a second probe batch.
+
+### C5 — Adam-induced death is real; its predicted timing is not
+
+| optimizer | accuracy | drop | `dead_exact` |
+|---|---:|---:|---:|
+| SGD (lr 0.1) | 87.69% | 4.56 pp | 20.5% |
+| Adam (default) | 90.27% | 3.18 pp | **58.8%** |
+| Adam (Lyle-tuned ε=1e-3, β₂=0.9) | 90.45% | 2.27 pp | **24.6%** |
+| AdamW | 91.17% | 2.28 pp | 58.0% |
+
+Lyle et al.'s two-hyperparameter fix cuts dead units 2.4× at identical learning rate.
+But the predicted post-task-switch death spike **is not there** — SGD has one (+2.44 pp
+at step 25), Adam declines monotonically. Adam's death accumulates *across* tasks
+(25.5% → 64.9%), not within them. Reported as a negative result, with two limitations
+stated: a 25-step probe grid could hide a faster spike, and the reference batch was
+disabled for those runs.
+
+### The thread running through all of it
+
+Three independent dissociations between dead units and plasticity:
+
+1. At lr=0.001, dead units nearly tripled while accuracy **improved**
+2. Adam carries 3× SGD's dead units and a **smaller** plasticity drop
+3. GELU has the largest plasticity drop and **zero** dead units by the standard metric
+
+### Open
+
+**C3** has no data yet — configs exist for all seven arms including Online Normalization
+(implemented against Chiley et al. 2019, backward control processes and all).
+**C4** has its data collected but no analysis written. **Setting 2** hit a calibration
+failure — baseline accuracy *rose* 45% → 57% over 50 tasks, so there was no plasticity
+loss for recycling to fix; its own gate is queued. The **tanh** arm of Setting 3
+diverged at lr=0.1 and needs recalibrating before it can be reported.
 
 ---
 
