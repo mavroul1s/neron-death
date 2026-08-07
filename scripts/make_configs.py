@@ -292,6 +292,35 @@ def setting2_cifar_cnn(lr: float) -> list:
     return out
 
 
+def setting3_tanh_gate(lr: float) -> list:
+    """Learning-rate calibration for the tanh arm of Setting 3.
+
+    tanh at lr=0.1 (the Setting 1 gate value) reached 10.05% -- chance for ten
+    classes. It diverged; its death metrics are meaningless and the row cannot
+    be reported. lr=0.1 with momentum 0.9 is an effective step near 1.0, which
+    ReLU tolerates and a saturating nonlinearity does not.
+
+    **Comparability caveat, to state in the paper rather than paper over:**
+    running tanh at a different step size from the other four activations means
+    the Setting 3 table is no longer a single-setting comparison. The honest
+    options are (a) report tanh separately with its own lr and say so, or
+    (b) calibrate every activation independently, which is a much larger
+    experiment. This sweep enables (a).
+    """
+    out = []
+    for lr_ in (0.003, 0.01, 0.03):
+        for seed in range(5):
+            rid = f"s3tanh_lr{lr_:g}_s{seed}".replace(".", "p")
+            cfg = _base(rid, seed, lr_)
+            cfg["model"]["activation"] = "tanh"
+            cfg["notes"] = (
+                "Setting 3 tanh learning-rate calibration; tanh diverged at "
+                "lr=0.1 (chance accuracy)."
+            )
+            out.append(cfg)
+    return out
+
+
 def setting2_gate(lr: float) -> list:
     """Setting 2's own reproduction gate. Baseline arm only.
 
@@ -375,6 +404,7 @@ EXPERIMENTS = {
     "setting2": setting2_cifar_cnn,
     "setting2_gate": setting2_gate,
     "setting3": setting3_activations,
+    "setting3_tanh_gate": setting3_tanh_gate,
 }
 
 
