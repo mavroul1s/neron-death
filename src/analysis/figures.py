@@ -518,15 +518,21 @@ def fig_c4_survival(
     # -- (c) episode length ECDF, reference batch
     if ep is not None and not ep.empty:
         e = ep[(ep.probe == "reference") & (~ep.censored)]
-        for lyr, colour in zip(layers, BLUES[1::2]):
+        # Depth is ordered, so the layers take steps of one hue rather than
+        # categorical slots -- but widely separated steps, or three near-
+        # identical blues make the panel unreadable.
+        for lyr, colour, y_at in zip(layers, (BLUES[0], BLUES[2], BLUES[5]), (32, 55, 78)):
             v = np.sort(e[e.layer_idx == lyr].length_tasks.to_numpy())
             if not v.size:
                 continue
-            ax_ep.step(v, 100 * np.arange(1, v.size + 1) / v.size, where="post",
-                       color=colour, lw=1.8)
-            ax_ep.annotate(f"layer {lyr}", xy=(v[int(0.75 * v.size)],
-                           75), xytext=(3, -8), textcoords="offset points",
-                           fontsize=7.5, color=colour, fontweight="semibold")
+            frac = 100 * np.arange(1, v.size + 1) / v.size
+            ax_ep.step(v, frac, where="post", color=colour, lw=1.8)
+            # Anchor each label on its own curve at a different height, so three
+            # curves that converge at the right do not stack their labels.
+            x_at = v[np.searchsorted(frac, y_at)] if frac[-1] >= y_at else v[-1]
+            ax_ep.annotate(f"layer {lyr}", xy=(x_at, y_at), xytext=(5, -3),
+                           textcoords="offset points", fontsize=7.5,
+                           color=colour, fontweight="semibold")
         ax_ep.set_xscale("log")
         ax_ep.set_xlabel("episode length (tasks)")
         ax_ep.set_ylabel("% of episodes at most this long")
@@ -557,22 +563,27 @@ def fig_c4_recurrence(surv: Dict[str, pd.DataFrame], out: Path) -> Optional[Path
     # -- (a) distribution of per-unit recycle counts, observed vs null
     obs = r.groupby(["run_id", "layer_idx", "neuron_idx"]).n_recycled.first().to_numpy()
     bins = np.arange(0, obs.max() + 3) - 0.5
-    ax_hist.hist(obs, bins=bins, color=SLOT[0], alpha=0.85, zorder=3,
-                 label="observed", density=True)
-    if null is not None and not null.empty:
-        # The null's own draws give the reference spread; its mean count per unit
-        # is identical to the observed by construction, which is the point.
-        ax_hist.axvline(obs.mean(), color=INK_2, lw=1.2, ls=(0, (4, 2)), zorder=4)
-        ax_hist.annotate(
-            f"same mean dose\n({obs.mean():.0f} per unit)",
-            xy=(obs.mean(), ax_hist.get_ylim()[1] * 0.92), xytext=(6, 0),
-            textcoords="offset points", fontsize=7.5, color=INK_2, va="top",
-        )
-    never = 100 * (obs == 0).mean()
+    ax_hist.hist(obs, bins=bins, color=SLOT[0], alpha=0.85, zorder=3, density=True)
+    ax_hist.axvline(obs.mean(), color=INK_2, lw=1.2, ls=(0, (4, 2)), zorder=4)
     ax_hist.annotate(
-        f"{never:.1f}% of units never\nrecycled once  (null: 0.0%)",
-        xy=(0.03, 0.62), xycoords="axes fraction", fontsize=7.5,
-        color=INK_2,
+        f"mean {obs.mean():.0f}", xy=(obs.mean(), 0.99), xycoords=("data", "axes fraction"),
+        xytext=(4, -2), textcoords="offset points", fontsize=7.5, color=INK_2, va="top",
+    )
+    # The null holds the per-task, per-layer dose fixed and redraws only *which*
+    # units, so any excess concentration is targeting, not dose.
+    never = 100 * (obs == 0).mean()
+    lines = [f"{never:.1f}% of units never recycled once"]
+    if null is not None and not null.empty:
+        obs_gini = concentration(obs)["gini"]
+        q = np.percentile(null.gini.to_numpy(), [2.5, 97.5])
+        lines += [
+            f"Gini {obs_gini:.2f}",
+            f"same-dose null: {null.gini.mean():.2f} [{q[0]:.2f}, {q[1]:.2f}],",
+            "and it leaves no unit untouched",
+        ]
+    ax_hist.annotate(
+        "\n".join(lines), xy=(0.30, 0.86), xycoords="axes fraction",
+        fontsize=7.5, color=INK_2, va="top", linespacing=1.45,
     )
     ax_hist.set_xlabel("times a unit was recycled")
     ax_hist.set_ylabel("density of units")
@@ -584,7 +595,7 @@ def fig_c4_recurrence(surv: Dict[str, pd.DataFrame], out: Path) -> Optional[Path
     tot_dead = r.n_recycled_while_dead.sum()
     tot_alive = r.n_recycled_while_alive.sum()
     share = 100 * np.array([tot_alive, tot_dead]) / (tot_alive + tot_dead)
-    ax_state.barh([1, 0], share, color=[SLOT[1], SLOT[0]], height=0.5,
+    ax_state.barh([1, 0], share, color=[SLOT[1], SLOT[0]], height=0.34,
                   zorder=3, edgecolor=SURFACE, linewidth=1.0)
     ax_state.set_yticks([1, 0], ["alive when chosen", "genuinely dead"])
     for y, v in zip([1, 0], share):
