@@ -484,16 +484,18 @@ def recycling_recurrence(panel: NeuronPanel, probe: str = "current") -> pd.DataF
     was_dead_when_chosen = rec & prior
     was_alive_when_chosen = rec & ~prior
 
+    trained_dead = panel.trained(dead_all)
     return pd.DataFrame(
         {
             "run_id": panel.run_id,
+            "probe": probe,
             "layer_idx": panel.layer,
             "neuron_idx": panel.neuron,
             "n_recycled": rec_trained.sum(axis=0).astype(np.int64),
             "n_recycled_while_dead": was_dead_when_chosen.sum(axis=0).astype(np.int64),
             "n_recycled_while_alive": was_alive_when_chosen.sum(axis=0).astype(np.int64),
-            "n_dead_boundaries": panel.trained(panel.dead).sum(axis=0).astype(np.int64),
-            "ever_dead": panel.trained(panel.dead).any(axis=0),
+            "n_dead_boundaries": trained_dead.sum(axis=0).astype(np.int64),
+            "ever_dead": trained_dead.any(axis=0),
             "mean_abs_act": panel.trained(panel.mean_abs_act).mean(axis=0),
         }
     )
@@ -613,22 +615,28 @@ def analyse(
     null_draws: int = 0,
     null_seed: int = 0,
 ) -> Dict[str, pd.DataFrame]:
-    """Every table above, concatenated over the runs in `source`."""
-    out: Dict[str, List[pd.DataFrame]] = {
-        "first_death": [],
-        "transitions": [],
-        "episodes": [],
-        "recurrence": [],
-        "persistence": [],
-        "null": [],
-    }
+    """Every table above, concatenated over the runs in `source`.
+
+    Each state-dependent table is emitted **on both probe batches**, tagged by a
+    ``probe`` column, rather than on the current-task batch with the reference
+    one available on request. Recovery rates differ substantially between the
+    two, and a caller who takes the default and never asks the question would
+    report the distribution moving as though it were units reviving.
+    """
+    keys = ("first_death", "transitions", "episodes", "recurrence")
+    out: Dict[str, List[pd.DataFrame]] = {k: [] for k in keys}
+    out["persistence"] = []
+    out["null"] = []
+
     panels: List[NeuronPanel] = []
     for panel in iter_panels(source, run_ids):
         panels.append(panel)
-        out["first_death"].append(first_death(panel))
-        out["transitions"].append(transitions(panel))
-        out["episodes"].append(death_episodes(panel))
-        out["recurrence"].append(recycling_recurrence(panel))
+        probes = ["current"] + (["reference"] if panel.dead_ref is not None else [])
+        for probe in probes:
+            out["first_death"].append(first_death(panel, probe))
+            out["transitions"].append(transitions(panel, probe=probe))
+            out["episodes"].append(death_episodes(panel, probe))
+            out["recurrence"].append(recycling_recurrence(panel, probe))
         out["persistence"].append(recycling_persistence(panel))
         if null_draws and panel.recycled.any():
             n = recurrence_null(panel, null_draws, null_seed)
@@ -639,8 +647,13 @@ def analyse(
         k: (pd.concat(v, ignore_index=True) if v else pd.DataFrame())
         for k, v in out.items()
     }
-    surv, grid = survival_matrix(panels)
-    tables["survival_matrix"] = pd.DataFrame(surv, columns=grid, index=[p.run_id for p in panels])
+    for probe in ("current", "reference"):
+        if probe == "reference" and any(p.dead_ref is None for p in panels):
+            continue
+        surv, grid = survival_matrix(panels, probe=probe)
+        tables[f"survival_matrix_{probe}"] = pd.DataFrame(
+            surv, columns=grid, index=[p.run_id for p in panels]
+        )
     return tables
 
 

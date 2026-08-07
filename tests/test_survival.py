@@ -146,6 +146,47 @@ def test_units_dead_at_init_are_prevalent_not_incident():
     assert fd.death_task.tolist() == [0, 1]  # unit 0's value is not an event
 
 
+# -- the two probe batches ----------------------------------------------------
+
+
+def test_recovery_is_read_off_whichever_probe_batch_is_asked_for():
+    """The confound this separates is the point of logging two batches.
+
+    Here the unit revives on the current task's inputs and stays silent on the
+    fixed reference batch -- i.e. the permutation moved, the unit did not. A
+    version that ignored `probe` would report a spontaneous recovery.
+    """
+    dead = np.array([[False], [True], [False]])
+    dead_ref = np.array([[False], [True], [True]])
+    panel = survival.panel_from_frame(make_frame(dead, dead_ref=dead_ref))
+
+    cur = survival.transitions(panel, per_layer=False, probe="current").iloc[0]
+    ref = survival.transitions(panel, per_layer=False, probe="reference").iloc[0]
+    assert cur.n_dead_alive == 1 and cur.p_recover == pytest.approx(1.0)
+    assert ref.n_dead_alive == 0 and ref.p_recover == pytest.approx(0.0)
+    assert ref.n_dead_dead == 1
+
+
+def test_reference_probe_is_refused_when_the_log_lacks_it():
+    """Silently falling back to the current batch would answer a different
+    question under the same name."""
+    panel = survival.panel_from_frame(make_frame(np.zeros((3, 1), bool)))
+    with pytest.raises(ValueError, match="exact_zero_flag_ref"):
+        survival.transitions(panel, probe="reference")
+
+
+def test_analyse_reports_both_probes_when_both_are_logged(tmp_path):
+    dead = np.array([[False], [True], [False]])
+    dead_ref = np.array([[False], [True], [True]])
+    path = tmp_path / "neurons.parquet"
+    make_frame(dead, dead_ref=dead_ref).to_parquet(path)
+
+    tables = survival.analyse(path)
+    assert set(tables["transitions"]["probe"]) == {"current", "reference"}
+    assert set(tables["episodes"]["probe"]) == {"current", "reference"}
+    assert "survival_matrix_reference" in tables
+
+
 # -- transitions --------------------------------------------------------------
 
 
