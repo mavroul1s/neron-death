@@ -390,7 +390,7 @@ def fig_c2_definitions(
     metrics = ex.table("metrics")
     if metrics.empty:
         return None
-    chosen = ex.select(arm=arm, lr=lr, dataset="permuted_mnist")
+    chosen = ex.select(arm=arm, lr=lr, activation="relu", dataset="permuted_mnist")
     m = metrics[
         metrics.run_id.isin(chosen.run_id) & (metrics.probe_point == "task_end")
     ]
@@ -643,7 +643,8 @@ def fig_gate_dose_response(ex: Extracts, out: Path) -> Optional[Path]:
     tasks, metrics = ex.table("tasks"), ex.table("metrics")
     if tasks.empty:
         return None
-    base = ex.select(by="levels", arm="none", dataset="permuted_mnist")
+    base = ex.select(by="levels", arm="none", activation="relu",
+                     dataset="permuted_mnist")
     lrs = sorted(base.lr.unique())
     if len(lrs) < 3:
         return None
@@ -698,7 +699,7 @@ def fig_reference_asymmetry(
     metrics = ex.table("metrics")
     if metrics.empty:
         return None
-    chosen = ex.select(arm=arm, lr=lr, dataset="permuted_mnist")
+    chosen = ex.select(arm=arm, lr=lr, activation="relu", dataset="permuted_mnist")
     m = metrics[
         metrics.run_id.isin(chosen.run_id) & (metrics.probe_point == "task_end")
     ]

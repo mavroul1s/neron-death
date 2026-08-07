@@ -225,6 +225,34 @@ def test_setting3_uses_the_calibrated_tanh_runs_when_given_one(tmp_path, capsys)
     assert "dropped" not in capsys.readouterr().out
 
 
+def test_tau_baseline_is_not_contaminated_by_the_activation_sweep(tmp_path):
+    """"arm == none, lr == 0.1, permuted MNIST" also describes all 25 runs of the
+    activation sweep. Pooling them supplies the tau figure a baseline averaged
+    over five activations, and because the IQM trims the outer 25% the diverged
+    tanh arm is discarded and the number moves by under a point -- so the figure
+    looks fine and is wrong. This is a regression test for that.
+    """
+    tau = [_config(f"tau_none_lr0p1_s{s}", s, 0.1) for s in range(10)]
+    tau += [_config(f"tau_redo_t0p1_lr0p1_s{s}", s, 0.1, arm="redo", tau=0.1)
+            for s in range(10)]
+    write_extract(tmp_path, "tau", tau, accuracy=lambda c, t: (
+        0.877 if (c["recycling"]["kind"] == "none") else 0.925),
+        dead=lambda c, t, l: 0.2)
+
+    s3 = [_config(f"s3_act_{a}_lr0p1_s{s}", s, 0.1, activation=a)
+          for a in ("relu", "gelu", "silu", "leaky_relu", "tanh") for s in range(5)]
+    write_extract(tmp_path, "setting3", s3, accuracy=lambda c, t: (
+        0.10 if c["model"]["activation"] == "tanh" else 0.90),
+        dead=lambda c, t, l: 0.2)
+
+    ex = figures.Extracts(tmp_path)
+    picked = ex.select(run_prefix="tau_", arm="none", lr=0.1, activation="relu",
+                       dataset="permuted_mnist")
+    assert len(picked) == 10
+    assert set(picked.extract) == {"tau"}
+    assert all(r.startswith("tau_none") for r in picked.run_id)
+
+
 def test_build_all_names_the_figures_it_could_not_draw(tmp_path, capsys):
     """A four-arm figure that quietly becomes a three-arm figure is the kind of
     thing that survives into a submission."""
