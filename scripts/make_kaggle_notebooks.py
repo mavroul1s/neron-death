@@ -155,8 +155,7 @@ def build(job: dict, template: dict) -> dict:
         data_line = 'DATA = DATA_MNIST\nassert DATA, "MNIST not found in the code dataset"'
 
     _find_cell(nb, "EXPERIMENT =")["source"] = _as_source(
-        f'''from src.config import load_config
-from src.train import Trainer
+        f'''import time
 
 # --- pre-filled for this job; nothing to edit ------------------------------
 EXPERIMENT = "{job['experiment']}"
@@ -177,9 +176,19 @@ assert len(configs) == EXPECTED_RUNS, (
 )
 print(f"{{EXPERIMENT}}: {{len(configs)}} configs -- as expected")
 
-cfg = load_config(configs[0])
-cfg["data"]["root"] = DATA
-print(Trainer(cfg, runs_root=RUNS).run())'''
+# Smoke-test as a SUBPROCESS, never in this kernel. A Trainer run here keeps its
+# CUDA allocations for the life of the session, and the next cell then launches
+# children onto the same GPUs which OOM. That killed a Setting 2 session: a CNN
+# probing 2048 images holds far more memory than the MLPs ever did.
+_t0 = time.perf_counter()
+subprocess.run(
+    [sys.executable, "-m", "src.train", "--config", configs[0],
+     "--runs-root", RUNS, "--data-root", DATA, "--device", "cuda"],
+    cwd=REPO, check=True,
+)
+_per_run = time.perf_counter() - _t0
+print(f"\\none run: {{_per_run:.0f}}s")
+print(f"{{len(configs)}} runs on 2 GPUs = {{_per_run * len(configs) / 2 / 3600:.2f}} h")'''
     )
 
     hours = "unmeasured" if job["hours"] is None else f"~{job['hours']:.1f} h"
