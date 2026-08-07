@@ -116,6 +116,30 @@ class NeuronPanel:
     def layers(self) -> List[int]:
         return sorted(set(int(x) for x in self.layer))
 
+    def dead_matrix(self, probe: str = "current") -> np.ndarray:
+        """The death flag on one of the two probe batches (CLAUDE.md §5).
+
+        ``"current"`` is the current task's distribution, ``"reference"`` the
+        fixed batch that never changes across the run.
+
+        This choice is not cosmetic and every recurrent-event result here has to
+        be read against it. The task distribution changes at every boundary, so
+        a unit that is silent on task t's inputs and firing on task t+1's may
+        never have changed at all -- only the inputs did. A dead->alive
+        transition on the *reference* batch cannot be explained that way, which
+        is the whole reason a second probe batch is logged.
+        """
+        if probe == "current":
+            return self.dead
+        if probe == "reference":
+            if self.dead_ref is None:
+                raise ValueError(
+                    f"{self.run_id}: no exact_zero_flag_ref in this log, so the "
+                    "distribution-relative confound cannot be separated"
+                )
+            return self.dead_ref
+        raise ValueError(f"unknown probe {probe!r}; use 'current' or 'reference'")
+
 
 def panel_from_frame(df: pd.DataFrame, run_id: str = "") -> NeuronPanel:
     """Reshape one run's rows into a panel.
@@ -226,7 +250,7 @@ def iter_panels(
 # -- 1. time to first death ---------------------------------------------------
 
 
-def first_death(panel: NeuronPanel) -> pd.DataFrame:
+def first_death(panel: NeuronPanel, probe: str = "current") -> pd.DataFrame:
     """Per unit: the task it first went silent, or right-censoring at the end.
 
     Units already dead at the init probe are reported with ``prevalent=True`` and
@@ -234,20 +258,20 @@ def first_death(panel: NeuronPanel) -> pd.DataFrame:
     they have no time-to-event, and folding them in as "died at task 0" would
     invent an event that training did not cause.
     """
-    dead = panel.trained(panel.dead)
+    flag = panel.dead_matrix(probe)
+    dead = panel.trained(flag)
     times = panel.trained_times
     ever = dead.any(axis=0)
     first_row = np.argmax(dead, axis=0)  # 0 where never dead; masked by `ever`
     horizon = int(times[-1])
 
-    prevalent = (
-        panel.dead[0] if panel.has_init else np.zeros(panel.n_units, dtype=bool)
-    )
+    prevalent = flag[0] if panel.has_init else np.zeros(panel.n_units, dtype=bool)
     return pd.DataFrame(
         {
             "run_id": panel.run_id,
             "layer_idx": panel.layer,
             "neuron_idx": panel.neuron,
+            "probe": probe,
             "prevalent": prevalent,
             "event": ever & ~prevalent,
             # Task index of first death, or the horizon for a censored unit.
@@ -294,7 +318,9 @@ def kaplan_meier(
 
 
 def survival_matrix(
-    panels: Sequence[NeuronPanel], layer_idx: Optional[int] = None
+    panels: Sequence[NeuronPanel],
+    layer_idx: Optional[int] = None,
+    probe: str = "current",
 ) -> Tuple[np.ndarray, np.ndarray]:
     """(n_runs, n_tasks) survival curves, one row per run.
 
@@ -303,7 +329,7 @@ def survival_matrix(
     """
     rows, grid = [], None
     for p in panels:
-        fd = first_death(p)
+        fd = first_death(p, probe)
         if layer_idx is not None:
             fd = fd[fd.layer_idx == layer_idx]
         alive_at_entry = fd[~fd.prevalent]
@@ -321,7 +347,9 @@ def survival_matrix(
 # -- 2. transitions: is death absorbing? --------------------------------------
 
 
-def transitions(panel: NeuronPanel, per_layer: bool = True) -> pd.DataFrame:
+def transitions(
+    panel: NeuronPanel, per_layer: bool = True, probe: str = "current"
+) -> pd.DataFrame:
     """Counts of the four state changes between consecutive task boundaries.
 
     ``recovered`` is the number of dead->alive transitions. The literature's
@@ -333,8 +361,12 @@ def transitions(panel: NeuronPanel, per_layer: bool = True) -> pd.DataFrame:
     (``*_after_recycle``): a unit that comes back because ReDo reinitialised it
     is not evidence of spontaneous recovery, and pooling the two would
     manufacture the result.
+
+    Read ``p_recover`` on both probes before believing it. On the current-task
+    batch a recovery may be the permutation changing rather than the unit; on
+    the reference batch it cannot be. See ``NeuronPanel.dead_matrix``.
     """
-    dead = panel.trained(panel.dead)
+    dead = panel.trained(panel.dead_matrix(probe))
     rec = panel.trained(panel.recycled)
     prev, curr = dead[:-1], dead[1:]
     # Recycling in the *destination* task is what could have caused the change.
@@ -349,6 +381,7 @@ def transitions(panel: NeuronPanel, per_layer: bool = True) -> pd.DataFrame:
         frames.append(
             {
                 "run_id": panel.run_id,
+                "probe": probe,
                 "layer_idx": -1 if lyr is None else lyr,
                 "n_alive_dead": int(np.count_nonzero(~p & c & untouched)),
                 "n_alive_alive": int(np.count_nonzero(~p & ~c & untouched)),
@@ -375,14 +408,14 @@ def transitions(panel: NeuronPanel, per_layer: bool = True) -> pd.DataFrame:
 # -- 3. death episodes --------------------------------------------------------
 
 
-def death_episodes(panel: NeuronPanel) -> pd.DataFrame:
+def death_episodes(panel: NeuronPanel, probe: str = "current") -> pd.DataFrame:
     """One row per maximal run of consecutive boundaries a unit was dead for.
 
     ``censored`` marks an episode still open at the last task -- those are the
     permanent deaths, and averaging their length in with the closed ones would
     understate how long silence lasts.
     """
-    dead = panel.trained(panel.dead)
+    dead = panel.trained(panel.dead_matrix(probe))
     rec = panel.trained(panel.recycled)
     times = panel.trained_times
     T = dead.shape[0]
@@ -412,6 +445,7 @@ def death_episodes(panel: NeuronPanel) -> pd.DataFrame:
     return pd.DataFrame(
         {
             "run_id": panel.run_id,
+            "probe": probe,
             "layer_idx": panel.layer[start_col],
             "neuron_idx": panel.neuron[start_col],
             "start_task": times[start_row],
