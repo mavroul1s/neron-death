@@ -1,0 +1,33 @@
+{
+  "data": {
+    "batch_size": 128,
+    "flatten": false,
+    "n_tasks": 200,
+    "name": "label_shuffled_cifar10",
+    "root": "data"
+  },
+  "device": "auto",
+  "model": {
+    "activation": "relu",
+    "architecture": "cnn",
+    "channels": [
+      32,
+      64,
+      64
+    ],
+    "fc_dims": [
+      128
+    ],
+    "image_size": 32,
+    "in_channels": 3,
+    "out_features": 10
+  },
+  "notes": "Setting 2 reproduction gate: does label-shuffled CIFAR-10 + CNN lose plasticity at this step size? Baseline arm only.",
+  "optim": {
+    "lr": 0.1,
+    "momentum": 0.9,
+    "name": "sgd"
+  },
+  "run_id": "s2gate_cifar_cnn_lr0p1_s2",
+  "seed": 2
+}

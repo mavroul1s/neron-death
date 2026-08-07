@@ -105,6 +105,23 @@ JOBS = [
         ),
     },
     {
+        "name": "setting2_gate",
+        "experiment": "setting2_gate",
+        "globs": ["*.json"],
+        "pattern": "s2gate_*",
+        "is_gate": False,
+        "runs": 10,
+        "hours": 1.1,
+        "data": "cifar",
+        "why": (
+            "Setting 2's own reproduction gate. The first Setting 2 sweep showed "
+            "NO plasticity loss -- baseline accuracy rose 45% -> 57% and was "
+            "still climbing -- so its C1 numbers mean nothing. This finds a step "
+            "size at which CIFAR-10 + CNN actually loses plasticity, exactly as "
+            "§A.4 did for permuted MNIST. Run this BEFORE re-running setting2."
+        ),
+    },
+    {
         "name": "setting2_cifar_cnn",
         "experiment": "setting2",
         "globs": ["*.json"],

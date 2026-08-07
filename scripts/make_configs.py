@@ -292,6 +292,52 @@ def setting2_cifar_cnn(lr: float) -> list:
     return out
 
 
+def setting2_gate(lr: float) -> list:
+    """Setting 2's own reproduction gate. Baseline arm only.
+
+    The first Setting 2 sweep (2026-08-07, lr=0.01, 50 tasks) showed **no
+    plasticity loss at all** -- baseline online accuracy *rose* 45.1% -> 56.6%
+    and was still climbing at task 49. Its C1 numbers are therefore
+    uninterpretable: there is no loss to explain, and recycling a still-improving
+    network can only slow it down.
+
+    lr=0.01 was always a guess; the gate calibrated 0.1 for permuted MNIST with
+    an MLP, which does not transfer to CIFAR-10 with a CNN. This sweep does for
+    Setting 2 what §A.4 did for Setting 1: find a setting where the phenomenon
+    is present, before measuring anything about it.
+
+    Cheap: ~193 s per 50-task run measured, so 200 tasks is ~13 min and the
+    whole gate is ~4.3 GPU-h.
+    """
+    out = []
+    for lr_ in (0.03, 0.1):
+        for seed in range(5):
+            rid = f"s2gate_cifar_cnn_lr{lr_:g}_s{seed}".replace(".", "p")
+            cfg = _base(rid, seed, lr_, n_tasks=200)
+            cfg["data"] = {
+                "name": "label_shuffled_cifar10",
+                "root": DATA_ROOT,
+                "n_tasks": 200,
+                "batch_size": 128,
+                "flatten": False,
+            }
+            cfg["model"] = {
+                "architecture": "cnn",
+                "in_channels": 3,
+                "image_size": 32,
+                "channels": [32, 64, 64],
+                "fc_dims": [128],
+                "out_features": 10,
+                "activation": "relu",
+            }
+            cfg["notes"] = (
+                "Setting 2 reproduction gate: does label-shuffled CIFAR-10 + CNN "
+                "lose plasticity at this step size? Baseline arm only."
+            )
+            out.append(cfg)
+    return out
+
+
 def setting3_activations(lr: float) -> list:
     """Setting 3 (CLAUDE.md §9): the activation sweep, one config field.
 
@@ -327,6 +373,7 @@ EXPERIMENTS = {
     "eps": eps_sweep,
     # CLAUDE.md §9 replacements for the cancelled transformer arm.
     "setting2": setting2_cifar_cnn,
+    "setting2_gate": setting2_gate,
     "setting3": setting3_activations,
 }
 
