@@ -110,16 +110,16 @@ JOBS = [
         "globs": ["*.json"],
         "pattern": "c3_*",
         "is_gate": False,
-        "runs": 30,
-        "hours": 3.2,
+        "runs": 35,
+        "hours": 3.7,
         "why": (
-            "C3, the last untested claim: does L2 improve accuracy while "
-            "INCREASING dead units and decreasing effective rank? Replicates "
-            "Dohare et al. Fig. 4b with the C2 decomposition added, which is "
-            "what makes it new rather than a repeat. The `online_norm` arm is "
-            "absent -- src/models.py refuses to approximate Chiley et al. 2019 "
-            "-- so this covers backprop, L2 at three strengths, "
-            "shrink-and-perturb and dropout."
+            "C3, the last untested claim, now COMPLETE: does L2 improve accuracy "
+            "while INCREASING dead units and decreasing effective rank, and does "
+            "online norm end up with MORE dead units than plain backprop despite "
+            "being designed to prevent them? Replicates Dohare et al. Fig. 4b "
+            "with the C2 decomposition added, which is what makes it new rather "
+            "than a repeat. All seven arms: backprop, L2 at three strengths, "
+            "shrink-and-perturb, dropout, and online norm."
         ),
     },
     {
