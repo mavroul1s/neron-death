@@ -151,6 +151,14 @@ def panel_from_frame(df: pd.DataFrame, run_id: str = "") -> NeuronPanel:
     key = units[:, 0] * width + units[:, 1]
     col = np.searchsorted(key, df["layer_idx"].to_numpy() * width + df["neuron_idx"].to_numpy())
 
+    # The row count matching T*U does not by itself prove every cell is filled
+    # once -- a duplicated (task, unit) row plus a missing one would pass it and
+    # leave uninitialised memory in the matrix. Check the cells, not the total.
+    if np.unique(row.astype(np.int64) * U + col).size != T * U:
+        raise ValueError(
+            f"{run_id}: per-neuron log has duplicate or missing (task, unit) cells"
+        )
+
     def grid(column: str, dtype) -> np.ndarray:
         out = np.empty((T, U), dtype=dtype)
         out[row, col] = df[column].to_numpy()
@@ -389,13 +397,17 @@ def death_episodes(panel: NeuronPanel) -> pd.DataFrame:
     start_row, start_col = start_row[order_s], start_col[order_s]
     end_row = end_row[order_e]
 
+    # diff == -1 at row e means the last dead boundary was e - 1, so the episode
+    # occupies rows [start_row, end_row - 1] and its length is end_row - start_row.
     length = end_row - start_row
     censored = end_row >= T
     # Was the unit recycled during the episode, i.e. did the intervention end it?
-    ended_by_recycle = np.zeros(start_row.size, dtype=bool)
-    for i, (s, e, c) in enumerate(zip(start_row, end_row, start_col)):
-        stop = min(e, T - 1)
-        ended_by_recycle[i] = bool(rec[s : stop + 1, c].any())
+    # Prefix sums rather than a slice per episode: there are tens of thousands of
+    # episodes per run and the loop was the whole cost of this function.
+    cum = np.vstack([np.zeros((1, panel.n_units), np.int64), np.cumsum(rec, axis=0)])
+    ended_by_recycle = (
+        cum[end_row, start_col] - cum[start_row, start_col]
+    ) > 0
 
     return pd.DataFrame(
         {
@@ -468,24 +480,24 @@ def recurrence_null(
     value can be read against a distribution rather than a point.
     """
     rng = np.random.default_rng(seed)
-    rec = panel.trained(panel.recycled)
-    T = rec.shape[0]
-    layers = panel.layers
-    masks = {l: panel.layer_mask(l) for l in layers}
-    counts_per_task = {l: rec[:, masks[l]].sum(axis=1) for l in layers}
-    sizes = {l: int(masks[l].sum()) for l in layers}
-
     rows = []
     for draw in range(n_draws):
-        counts = np.zeros(panel.n_units, dtype=np.int64)
-        for l in layers:
-            idx = np.flatnonzero(masks[l])
-            for t in range(T):
-                k = int(counts_per_task[l][t])
-                if k:
-                    counts[rng.choice(idx, size=k, replace=False)] += 1
-        rows.append({"draw": draw, **concentration(counts)})
+        rows.append({"draw": draw, **concentration(null_counts(panel, rng))})
     return pd.DataFrame(rows)
+
+
+def null_counts(panel: NeuronPanel, rng: np.random.Generator) -> np.ndarray:
+    """One draw of per-unit recycle counts with `k` held fixed per task and layer."""
+    rec = panel.trained(panel.recycled)
+    counts = np.zeros(panel.n_units, dtype=np.int64)
+    for lyr in panel.layers:
+        mask = panel.layer_mask(lyr)
+        idx = np.flatnonzero(mask)
+        per_task = rec[:, mask].sum(axis=1)
+        for k in per_task:
+            if k:
+                counts[rng.choice(idx, size=int(k), replace=False)] += 1
+    return counts
 
 
 def concentration(counts: np.ndarray) -> Dict[str, float]:
@@ -523,20 +535,24 @@ def recycling_persistence(panel: NeuronPanel) -> pd.DataFrame:
     """P(recycled at t+1 | recycled at t) against the marginal rate.
 
     The enrichment ratio is the sharpest single number for "the same units get
-    picked again": 1.0 means the choice at t says nothing about the choice at
-    t+1. Restricted to consecutive tasks that both contain at least one event,
-    so tasks with no recycling do not dilute the base rate.
+    picked again": 1.0 means the last choice says nothing about the next one.
+
+    Taken over consecutive *active* tasks, not consecutive tasks. Recycling
+    fires every ``recycling.freq`` optimizer steps (1000) against ~469 steps per
+    task, so events land in roughly every other task and adjacent-task pairs are
+    almost never both active -- pairing on the raw task index silently returns
+    nothing. The quantity of interest is "recycled at the last event, recycled
+    at the next", which is what the active subsequence gives.
     """
     rec = panel.trained(panel.recycled)
     rows = []
     for lyr in panel.layers:
         m = panel.layer_mask(lyr)
         r = rec[:, m]
-        active = r.any(axis=1)
-        pairs = active[:-1] & active[1:]
-        if not pairs.any():
+        r = r[r.any(axis=1)]  # drop tasks with no event
+        if r.shape[0] < 2:
             continue
-        prev, curr = r[:-1][pairs], r[1:][pairs]
+        prev, curr = r[:-1], r[1:]
         n_prev = int(prev.sum())
         both = int((prev & curr).sum())
         marginal = float(curr.mean())
@@ -545,7 +561,7 @@ def recycling_persistence(panel: NeuronPanel) -> pd.DataFrame:
             {
                 "run_id": panel.run_id,
                 "layer_idx": lyr,
-                "n_task_pairs": int(pairs.sum()),
+                "n_event_pairs": int(prev.shape[0]),
                 "p_recycled_marginal": marginal,
                 "p_recycled_given_prev": cond,
                 "enrichment": cond / marginal if marginal > 0 else float("nan"),
