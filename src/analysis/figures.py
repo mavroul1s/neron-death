@@ -204,7 +204,9 @@ class Extracts:
             return []
         return [a for a in ARM_ORDER if a in set(self.runs.arm)]
 
-    def select(self, by: str = "seeds", **filters) -> pd.DataFrame:
+    def select(
+        self, by: str = "seeds", run_prefix: Optional[str] = None, **filters
+    ) -> pd.DataFrame:
         """Matching runs, from **one** extract rather than pooled across them.
 
         Extracts overlap: the reproduction gate and the tau sweep both contain a
@@ -216,8 +218,19 @@ class Extracts:
         ``by="seeds"`` takes the extract contributing the most runs (for a
         single-condition figure); ``by="levels"`` takes the one spanning the most
         learning rates (for a dose-response, which needs the whole ladder).
+
+        **Filter on everything that has to match, including `activation`.**
+        "arm == none, lr == 0.1, permuted MNIST" also describes all 25 runs of
+        the activation sweep, whose baseline pools five different activations
+        and a diverged tanh arm. That selection once silently supplied the
+        tau-sweep figure's baseline, and it did not look wrong -- the IQM trims
+        the outer 25%, so tanh's 10% was discarded and the number moved by less
+        than a percentage point. ``run_prefix`` pins the comparison to a single
+        sweep, which is the reliable guard.
         """
         runs = self.runs
+        if run_prefix is not None:
+            runs = runs[runs.run_id.str.startswith(run_prefix)]
         for key, value in filters.items():
             if value is None:
                 continue
@@ -273,8 +286,14 @@ def fig_tau_sweep(ex: Extracts, out: Path) -> Optional[Path]:
     tasks, rec = ex.table("tasks"), ex.table("recycling")
     if tasks.empty:
         return None
+    # Pinned to the tau sweep: every arm here, baseline included, must come from
+    # the sweep whose seeds are paired by construction.
     runs = pd.concat(
-        [ex.select(arm=a, lr=0.1, dataset="permuted_mnist") for a in ex.arms_present()],
+        [
+            ex.select(run_prefix="tau_", arm=a, lr=0.1, activation="relu",
+                      dataset="permuted_mnist")
+            for a in ex.arms_present()
+        ],
         ignore_index=True,
     )
     interventions = [a for a in ARM_ORDER if a != "none" and a in set(runs.arm)]
