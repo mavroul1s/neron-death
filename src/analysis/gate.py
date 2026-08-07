@@ -96,6 +96,74 @@ def spearman_per_seed(runs: Sequence[Run], window: Sequence[int], probe_batch: s
 # ---------------------------------------------------------------------------
 
 
+def collapse_diagnosis(
+    runs: Sequence[Run], plan: dict, n_classes: int = 10
+) -> Optional[str]:
+    """Did the network stop training altogether, rather than lose plasticity?
+
+    **This is not part of the frozen criterion and does not change its verdict.**
+    It is the manipulation check that was run by hand before the Setting 1 gate
+    was accepted ("lr=0.1 is a healthy regime, not a diverged one" -- CLAUDE.md
+    §11), written down so it cannot be skipped.
+
+    It exists because the frozen criterion cannot tell the two apart. Its two
+    conditions are "accuracy fell by at least 3 pp" and "dead_exact rose", and a
+    network that dies completely satisfies both *maximally*: accuracy falls all
+    the way to chance and every unit ends up dead. A collapse therefore produces
+    the most emphatic possible PASS, which is the wrong way round.
+
+    The signature of collapse, all of which must hold together -- any one alone
+    is weak evidence:
+
+    - late accuracy at chance (1/n_classes),
+    - late loss at ln(n_classes), the loss of a uniform predictor,
+    - the gradient norm at zero, so no parameter is moving any more.
+
+    Returns None when the run looks healthy, or a description of the collapse.
+    """
+    if not runs:
+        return None
+    late = _window(plan, "late")
+    chance = 1.0 / n_classes
+
+    accs, losses, grads = [], [], []
+    for run in runs:
+        tasks = run.table("tasks")
+        if tasks.empty:
+            continue
+        tasks = tasks[(tasks["probe_point"] == "task_end") & (tasks["task_idx"].isin(late))]
+        accs.append(tasks["online_accuracy"].mean())
+        if "mean_loss" in tasks:
+            losses.append(tasks["mean_loss"].mean())
+        metrics = run.table("metrics")
+        if not metrics.empty and "grad_norm_layer" in metrics:
+            m = metrics[
+                (metrics["probe_point"] == "task_end")
+                & (metrics["task_idx"].isin(late))
+            ]
+            grads.append(float(m["grad_norm_layer"].abs().max()))
+    if not accs:
+        return None
+
+    acc = float(np.mean(accs))
+    loss = float(np.mean(losses)) if losses else float("nan")
+    grad = float(np.max(grads)) if grads else float("nan")
+    uniform_loss = float(np.log(n_classes))
+
+    at_chance = acc <= chance * 1.10
+    at_uniform_loss = losses and abs(loss - uniform_loss) < 0.05
+    frozen = grads and grad == 0.0
+    if not (at_chance and (at_uniform_loss or frozen)):
+        return None
+    return (
+        f"late accuracy {acc*100:.2f}% is chance for {n_classes} classes"
+        + (f"; late loss {loss:.3f} = ln({n_classes})" if at_uniform_loss else "")
+        + ("; gradient norm is exactly 0 -- no parameter is moving" if frozen else "")
+        + ". The network stopped training rather than losing plasticity, so the "
+        "drop is collapse, not the phenomenon."
+    )
+
+
 @dataclass
 class GateResult:
     learning_rate: float
@@ -108,10 +176,18 @@ class GateResult:
     dead_late: float
     accuracy_pass: bool
     dead_pass: bool
+    #: Advisory only. Set by `evaluate_gate`; never consulted by `passed`, which
+    #: reports the frozen criterion and nothing else.
+    collapse: Optional[str] = None
 
     @property
     def passed(self) -> bool:
         return self.accuracy_pass and self.dead_pass
+
+    @property
+    def usable(self) -> bool:
+        """Passed the frozen criterion *and* survived the health check."""
+        return self.passed and self.collapse is None
 
     @property
     def dissociation(self) -> bool:
@@ -135,6 +211,8 @@ class GateResult:
             "accuracy_pass": self.accuracy_pass,
             "dead_pass": self.dead_pass,
             "passed": self.passed,
+            "usable": self.usable,
+            "collapse": self.collapse,
             "dissociation": self.dissociation,
         }
 
@@ -198,6 +276,7 @@ def evaluate_gate(runs: Sequence[Run], plan: dict, learning_rate: float) -> Gate
         dead_late=float(iqm(dead_curves[:, late_w])),
         accuracy_pass=accuracy_pass,
         dead_pass=dead_pass,
+        collapse=collapse_diagnosis(runs, plan),
     )
 
 
@@ -220,6 +299,8 @@ def report(results: Sequence[GateResult], plan: dict) -> str:
     ]
     for r in results:
         mark = "PASS" if r.passed else "FAIL"
+        if r.collapse:
+            mark += " but COLLAPSED"
         lines += [
             f"lr = {r.learning_rate:g}  ({r.n_seeds} seeds)   [{mark}]",
             f"  online accuracy  early {r.early_accuracy}   late {r.late_accuracy}",
@@ -229,6 +310,16 @@ def report(results: Sequence[GateResult], plan: dict) -> str:
             f"  dead_exact rho   {r.dead_rho}"
             f"   -> {'pass' if r.dead_pass else 'FAIL'}",
         ]
+        if r.collapse:
+            lines += [
+                "",
+                "  *** STOP: this PASS is spurious. The network COLLAPSED. ***",
+                f"  {r.collapse}",
+                "  The frozen criterion cannot see this -- a dead network gives the",
+                "  most emphatic possible pass -- so it is reported separately and",
+                "  the criterion's verdict is left exactly as it stands. Treat this",
+                "  learning rate as unusable and calibrate DOWNWARD.",
+            ]
         if r.dissociation:
             lines += [
                 "",
@@ -245,8 +336,20 @@ def report(results: Sequence[GateResult], plan: dict) -> str:
             f"Forbidden: {gate['on_failure']['forbidden']}.",
             "",
         ]
+    elif not any(r.usable for r in results):
+        lines += [
+            "Every passing learning rate COLLAPSED, so none is usable. The frozen",
+            "criterion is satisfied and the setting is still wrong: accuracy fell",
+            "because training stopped, not because plasticity was lost.",
+            "",
+            "The ladder must go DOWN, not up -- the pre-specified 'raise the",
+            "learning rate' response addresses a drop that is too SMALL, and this",
+            "one is too large for the wrong reason. CLAUDE.md §3 also puts reducing",
+            "batch size ahead of any further learning-rate move.",
+            "",
+        ]
     else:
-        best = max((r for r in results if r.passed), key=lambda r: r.accuracy_drop_pp.point)
+        best = max((r for r in results if r.usable), key=lambda r: r.accuracy_drop_pp.point)
         lines.append(f"Best passing learning rate: {best.learning_rate:g}. Use it for §B.1.")
     return "\n".join(lines)
 
@@ -278,7 +381,7 @@ def main(argv=None) -> int:
                 f,
                 indent=2,
             )
-    return 0 if any(r.passed for r in results) else 2
+    return 0 if any(r.usable for r in results) else 2
 
 
 if __name__ == "__main__":
