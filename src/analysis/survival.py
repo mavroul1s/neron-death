@@ -459,7 +459,7 @@ def death_episodes(panel: NeuronPanel, probe: str = "current") -> pd.DataFrame:
 # -- 4. recycling recurrence: the paper's title -------------------------------
 
 
-def recycling_recurrence(panel: NeuronPanel) -> pd.DataFrame:
+def recycling_recurrence(panel: NeuronPanel, probe: str = "current") -> pd.DataFrame:
     """Per unit: how often it was recycled, and how often it was ever dead.
 
     ``n_recycled_while_alive`` uses the state at the boundary *before* the task
@@ -469,7 +469,7 @@ def recycling_recurrence(panel: NeuronPanel) -> pd.DataFrame:
     ``ever_dead == False`` was chosen by the intervention despite never once
     being silent anywhere in 200 tasks.
     """
-    dead_all = panel.dead
+    dead_all = panel.dead_matrix(probe)
     rec_trained = panel.trained(panel.recycled)
     # State one boundary earlier. With the init probe present this is defined for
     # every trained task; without it, task 0's events have no prior state and are
