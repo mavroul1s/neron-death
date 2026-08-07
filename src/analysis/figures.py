@@ -34,6 +34,7 @@ import pandas as pd
 
 from .gate import PLAN_PATH, load_plan
 from .stats import iqm, stratified_bootstrap
+from .survival import concentration
 
 # -- palette (data-viz reference instance, light surface) ---------------------
 
