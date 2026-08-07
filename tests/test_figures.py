@@ -118,9 +118,21 @@ def test_c3_figure_builds(c3_extract, tmp_path):
     assert (out / "fig7_c3_anomaly.pdf").exists()
 
 
+def test_arm_names_survive_both_run_id_conventions():
+    """C3 writes `_lr0p1_s2`; C5 writes only `_s0`, because its arms differ in
+    optimizer hyperparameters rather than learning rate. A parser that assumes
+    the learning-rate segment returns 'adam_lyle_s0' as an arm name and the
+    figure dies on a KeyError -- which is exactly what happened."""
+    assert figures._arm_from_run_id("c5_adam_lyle_s0", "c5_") == "adam_lyle"
+    assert figures._arm_from_run_id("c5_adamw_s4", "c5_") == "adamw"
+    assert figures._arm_from_run_id("c3_l2_1em3_lr0p1_s2", "c3_") == "l2_1em3"
+    assert figures._arm_from_run_id("c3_backprop_lr0p1_s0", "c3_") == "backprop"
+
+
 def test_c5_figure_builds(tmp_path):
     arms = {"sgd": 0.20, "adam_default": 0.59, "adam_lyle": 0.25, "adamw": 0.58}
-    cfgs = [_config(f"c5_{a}_lr0p001_s{s}", s, 0.001, optimizer=a.split("_")[0])
+    # Real C5 run_id shape: no `_lr` segment (see the test above).
+    cfgs = [_config(f"c5_{a}_s{s}", s, 0.001, optimizer=a.split("_")[0])
             for a in arms for s in range(5)]
     root = write_extract(
         tmp_path, "c5", cfgs,
@@ -132,6 +144,25 @@ def test_c5_figure_builds(tmp_path):
     out = tmp_path / "figs"
     assert figures.fig_c5_optimizers(figures.Extracts(root), out) is not None
     assert (out / "fig8_c5_optimizers.pdf").exists()
+
+
+def test_c5_figure_degrades_when_the_extract_predates_the_intra_task_fix(
+    tmp_path, capsys
+):
+    """The first C5 extract omitted intra_task.parquet. Drawing nothing loses the
+    cross-task result too; drawing panel (b) silently would hide that the
+    *pre-registered* panel is the missing one."""
+    arms = {"sgd": 0.20, "adam_default": 0.59}
+    cfgs = [_config(f"c5_{a}_s{s}", s, 0.001, optimizer=a.split("_")[0])
+            for a in arms for s in range(5)]
+    root = write_extract(
+        tmp_path, "c5", cfgs, accuracy=lambda c, t: 0.90,
+        dead=lambda c, t, l: arms[figures._arm_from_run_id(c["run_id"], "c5_")],
+        intra=False,
+    ).parent
+    figures.use_paper_style()
+    assert figures.fig_c5_optimizers(figures.Extracts(root), tmp_path / "figs")
+    assert "NOT drawn" in capsys.readouterr().out
 
 
 def test_setting2_figure_builds_on_a_short_run(tmp_path):
