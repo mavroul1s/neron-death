@@ -861,11 +861,19 @@ def fig_c5_optimizers(ex: Extracts, out: Path, lr: Optional[float] = None) -> Op
                          fontsize=7.5, color=colours[arm], fontweight="semibold")
     ax_task.set_xlabel("task")
     ax_task.set_ylabel("% dead_exact")
-    ax_task.set_title("(b) across tasks: where it actually accumulates", loc="left",
-                      fontsize=8.5, color=INK_2)
+    ax_task.set_title(
+        ("(b) " if has_intra else "") + "across tasks: where it actually accumulates",
+        loc="left", fontsize=8.5, color=INK_2,
+    )
     _grid(ax_task)
-    for a in (ax_step, ax_task):
-        a.margins(x=0.22)
+    ax_task.margins(x=0.22)
+    if not has_intra:
+        ax_task.annotate(
+            "the within-task panel needs intra_task.parquet,\n"
+            "absent from this extract",
+            xy=(0.5, -0.34), xycoords="axes fraction", ha="center",
+            fontsize=7, color=MUTED,
+        )
     fig.tight_layout()
     return _save(fig, out, "fig8_c5_optimizers")
 
