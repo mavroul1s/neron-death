@@ -1,0 +1,29 @@
+{
+  "data": {
+    "batch_size": 128,
+    "n_tasks": 200,
+    "name": "permuted_mnist",
+    "root": "data"
+  },
+  "device": "auto",
+  "l2": {
+    "lambda": 0.0001
+  },
+  "model": {
+    "activation": "relu",
+    "hidden_dims": [
+      500,
+      500,
+      500
+    ],
+    "init": "kaiming_uniform"
+  },
+  "notes": "C3 anomaly replication, arm l2_1em4 (protocol B.2).",
+  "optim": {
+    "lr": 0.1,
+    "momentum": 0.9,
+    "name": "sgd"
+  },
+  "run_id": "c3_l2_1em4_lr0p1_s2",
+  "seed": 2
+}
