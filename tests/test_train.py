@@ -249,13 +249,27 @@ def test_weight_decay_is_rejected_for_non_adamw():
     assert build_optimizer(cfg, model) is not None
 
 
-def test_online_norm_refuses_to_run_rather_than_approximate():
-    """C3 depends on this arm being faithful; a plausible approximation would be
-    worse than an error."""
+def test_online_norm_is_wired_into_the_model():
+    """Was a NotImplementedError until Online Normalization was implemented
+    against Chiley et al. 2019 (see src/online_norm.py). C3 depends on this arm
+    being faithful, so the substance is checked in tests/test_online_norm.py --
+    here we only assert the model builds it and it survives a forward/backward.
+    """
+    from src.models import MLP
+    from src.online_norm import OnlineNorm
+
+    model = MLP(in_features=8, hidden_dims=(6, 6), out_features=3, norm="online")
+    assert all(isinstance(n, OnlineNorm) for n in model.norms)
+    x = torch.randn(4, 8, requires_grad=True)
+    model(x).sum().backward()
+    assert torch.isfinite(x.grad).all()
+
+
+def test_unknown_norm_still_raises():
     from src.models import MLP
 
-    with pytest.raises(NotImplementedError, match="Online Normalization"):
-        MLP(in_features=4, hidden_dims=(4,), out_features=2, norm="online")
+    with pytest.raises(ValueError, match="unknown norm"):
+        MLP(in_features=4, hidden_dims=(4,), out_features=2, norm="nope")
 
 
 def test_config_hash_pins_resolved_values():
