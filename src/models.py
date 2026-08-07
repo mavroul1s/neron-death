@@ -162,21 +162,17 @@ def make_norm(name: str, dim: int) -> nn.Module:
     if name == "batch":
         return nn.BatchNorm1d(dim)
     if name == "online":
-        # Online Normalization (Chiley et al. 2019), the "online norm" arm of
-        # Dohare et al. Fig. 4b and therefore of C3 (protocol §B.2).
+        # Online Normalization (Chiley et al. 2019, arXiv:1905.05894), the
+        # "online norm" arm of Dohare et al. Fig. 4b and therefore of C3.
         #
-        # Deliberately NOT implemented from memory. Its forward pass keeps
-        # per-sample running estimates of mean/variance AND its backward pass
-        # applies two separate control processes; an approximation that gets the
-        # backward controls wrong would still train, still produce a plausible
-        # dead-unit curve, and silently invalidate C3. Implement it against the
-        # paper (and ideally against the reference implementation) before
-        # running §B.2.
-        raise NotImplementedError(
-            "norm='online' (Chiley et al. 2019 Online Normalization) is not "
-            "implemented yet. Required for the C3 arm in protocol §B.2; not "
-            "required for the Week-1 gate. See src/models.py:make_norm."
-        )
+        # Implemented against the paper in src/online_norm.py, NOT from memory:
+        # its backward pass is a control process rather than the derivative of
+        # its forward pass, so an implementation that lets autograd differentiate
+        # the forward is a different algorithm that trains perfectly well and
+        # would silently invalidate C3. See tests/test_online_norm.py.
+        from .online_norm import OnlineNorm
+
+        return OnlineNorm(dim)
     raise ValueError(f"unknown norm {name!r}; known: none, layer, batch, online")
 
 
