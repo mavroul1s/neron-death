@@ -9,6 +9,8 @@ tiny trajectory whose answer can be read off by eye.
 
 from __future__ import annotations
 
+from pathlib import Path
+
 import numpy as np
 import pandas as pd
 import pytest
@@ -368,6 +370,48 @@ def test_persistence_enrichment_is_about_one_for_independent_choices():
     p = survival.recycling_persistence(panel).iloc[0]
     assert p.p_recycled_marginal == pytest.approx(k / U, abs=0.01)
     assert p.enrichment == pytest.approx(1.0, abs=0.06)
+
+
+# -- against the real logs ----------------------------------------------------
+
+_REAL_RUNS = Path(__file__).resolve().parents[1] / "runs"
+
+
+def _a_run_with_a_per_neuron_log():
+    for d in sorted(p for p in _REAL_RUNS.glob("*") if p.is_dir()):
+        if (d / "neurons.parquet").exists() and (d / "metrics.parquet").exists():
+            return d
+    return None
+
+
+@pytest.mark.skipif(
+    _a_run_with_a_per_neuron_log() is None,
+    reason="no run outputs on this machine (runs/ is gitignored)",
+)
+def test_panel_prevalence_reproduces_metrics_parquet():
+    """The strongest check available: two independent code paths, same number.
+
+    `metrics.parquet` gets `dead_exact_frac` from `probes` aggregating over a
+    layer at training time. The panel gets it by pivoting the per-neuron log and
+    averaging a boolean matrix. They share no code. If the pivot misassigned
+    units to layers or boundaries, this is where it shows up -- and nowhere in
+    the survival output would it look wrong.
+    """
+    run_dir = _a_run_with_a_per_neuron_log()
+    panel = next(survival.iter_panels(_REAL_RUNS, [run_dir.name]))
+    metrics = pd.read_parquet(run_dir / "metrics.parquet")
+    metrics = metrics[metrics.probe_point == "task_end"]
+
+    for layer in panel.layers:
+        mask = panel.layer_mask(layer)
+        trained = panel.times >= 0
+        got = panel.dead[np.ix_(trained, mask)].mean()
+        want = metrics[metrics.layer_idx == layer].dead_exact_frac.mean()
+        assert got == pytest.approx(want, abs=1e-9), f"layer {layer}"
+
+        got_ref = panel.dead_ref[np.ix_(trained, mask)].mean()
+        want_ref = metrics[metrics.layer_idx == layer].dead_exact_frac_ref.mean()
+        assert got_ref == pytest.approx(want_ref, abs=1e-9), f"layer {layer} ref"
 
 
 def test_persistence_detects_a_perfectly_sticky_choice():
