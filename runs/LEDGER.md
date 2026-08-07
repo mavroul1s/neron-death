@@ -148,3 +148,25 @@ separates *which* units from *how many*, and it has not run.
 Budget: 5.53 + 15.21 = **20.74 / 40 GPU-h** for weeks 1–2. The remaining
 τ-sweep slices are ~13 GPU-h each, so completing §B.1 as specified lands near
 47 GPU-h — over the weeks-1–2 budget, as flagged when the overrun was found.
+
+### 2026-08-06 — Kaggle session 6: §B.1 slice B (`random_matched`). The C1 control.
+
+60 runs, ~13 GPU-h. **The frozen decision rule returns `inconclusive` at every
+τ** — ReDo beats random-matched by 0.38–0.61 pp, which is far under the 2 pp
+"≫" bar but with CIs excluding zero, so it is not "≈" either. Neither
+pre-registered branch fired. Full table in `CLAUDE.md` §11.
+
+The pre-specified response to inconclusive is *add seeds*. Noting once, here,
+that this will not change the verdict: the CIs are already ±0.04 pp and more
+seeds tighten them. "≈" requires a CI containing zero, unreachable for any true
+nonzero effect at sufficient power. The frozen plan is **not** being amended;
+the rule's verdict and the effect size get reported together.
+
+The substantive result, which the rule does not capture: **random-matched
+reproduces 88–92% of ReDo's benefit**, while recycling sets that are 87–91%
+alive. Targeting contributes ~10%. And the dose confound runs against the
+convenient reading — random-matched recycled ~31% *more* units than ReDo (its
+network stays deader, so its dormant set is bigger) and still underperformed
+slightly, so ReDo's edge is not a dose artefact.
+
+Cumulative: **33.7 / 40 GPU-h** for weeks 1–2.
