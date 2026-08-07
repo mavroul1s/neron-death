@@ -237,6 +237,106 @@ def test_redo_preserves_function_on_the_cnn(cnn):
     )
 
 
+def test_gradient_tracker_handles_conv_gradients(cnn):
+    """Regression: a Conv2d weight gradient is (C, C_in, kH, kW), so reducing
+    only dim 1 leaves (C, kH, kW) and then broadcasts against the (C,) bias
+    gradient. That crashed Setting 2 on its first real run."""
+    tracker = probes.GradientTracker(list(cnn.linears), window=2)
+    x = torch.randn(4, 3, 32, 32)
+    y = torch.randint(0, 10, (4,))
+    cnn.zero_grad(set_to_none=True)
+    torch.nn.functional.cross_entropy(cnn(x), y).backward()
+    tracker.update()
+
+    for j, mod in enumerate(cnn.linears):
+        per_neuron = tracker.neuron_mean(j)
+        assert per_neuron.shape == (probes.out_units(mod),), (
+            f"layer {j} ({type(mod).__name__}) gave {per_neuron.shape}"
+        )
+        assert np.all(np.isfinite(per_neuron))
+        assert tracker.layer_mean(j) >= per_neuron.max() - 1e-6
+
+
+def test_weight_norms_reduce_the_right_axes_for_conv(cnn):
+    """Each of the three outgoing shapes -- Linear, Conv2d, and Linear-after-
+    flatten -- puts the unit on a different axis."""
+    for li in range(cnn.n_hidden):
+        w_in = cnn.incoming_module(li).weight
+        w_out = cnn.outgoing_module(li).weight
+        n_in, n_out = probes.neuron_weight_norms(
+            w_in, w_out, spatial=cnn.outgoing_spatial(li)
+        )
+        units = cnn.hidden_dims[li]
+        assert n_in.shape == (units,), f"layer {li} incoming {n_in.shape}"
+        assert n_out.shape == (units,), f"layer {li} outgoing {n_out.shape}"
+        assert np.all(np.isfinite(n_in)) and np.all(np.isfinite(n_out))
+
+
+def test_outgoing_norm_isolates_one_channel_across_the_flatten(cnn):
+    """Zeroing one channel's outgoing block must zero exactly that channel's
+    norm -- the off-by-H*W check, in norm form."""
+    last_conv = cnn.n_conv - 1
+    with torch.no_grad():
+        cnn.outgoing_module(last_conv).weight.fill_(1.0)
+        cnn.outgoing_module(last_conv).weight[
+            :, interventions.flattened_channel_columns(2, cnn.flatten_spatial)
+        ] = 0.0
+    _, n_out = probes.neuron_weight_norms(
+        cnn.incoming_module(last_conv).weight,
+        cnn.outgoing_module(last_conv).weight,
+        spatial=cnn.flatten_spatial,
+    )
+    assert n_out[2] == 0.0
+    assert np.all(n_out[np.arange(len(n_out)) != 2] > 0)
+
+
+def test_cnn_trains_end_to_end(tiny_cifar_root, tmp_path):
+    """Setting 2 through the real training loop, on synthetic CIFAR.
+
+    The conv unit tests all passed while the actual sweep crashed on its first
+    optimizer step, because nothing exercised `Trainer` with a CNN. This does.
+    """
+    from src.train import Trainer
+
+    cfg = {
+        "run_id": "s2_smoke",
+        "seed": 0,
+        "device": "cpu",
+        "data": {
+            "name": "label_shuffled_cifar10",
+            "root": str(tiny_cifar_root),
+            "n_tasks": 2,
+            "batch_size": 64,
+            "flatten": False,
+        },
+        "model": {
+            "architecture": "cnn",
+            "channels": [4, 6],
+            "fc_dims": [8],
+            "image_size": 32,
+        },
+        "optim": {"name": "sgd", "lr": 0.01, "momentum": 0.9},
+        "recycling": {"kind": "redo", "tau": 0.1, "freq": 2},
+        "probe": {"n_probe": 32},
+        "checkpoint": {"every_tasks": 1},
+    }
+    run_dir = Trainer(cfg, runs_root=tmp_path / "runs").run()
+
+    import pyarrow.parquet as pq
+
+    neurons = pq.read_table(run_dir / "neurons.parquet")
+    # (2 tasks + init) x (4 + 6 + 8 units)
+    assert neurons.num_rows == 3 * (4 + 6 + 8)
+    cols = neurons.to_pydict()
+    assert all(np.isfinite(cols["w_in_norm"]))
+    assert all(np.isfinite(cols["w_out_norm"]))
+    assert (run_dir / "recycling.parquet").exists()
+
+    m = pq.read_table(run_dir / "metrics.parquet").to_pydict()
+    assert any(m["is_spatial"]), "conv layers must be flagged spatial"
+    assert not all(m["is_spatial"]), "the fc hidden layer must not be"
+
+
 def test_conv_init_resampling_uses_the_layers_own_distribution(cnn):
     w = cnn.sample_incoming_weights(0, 64)
     spec = cnn.init_specs[0]

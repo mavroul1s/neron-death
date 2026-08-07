@@ -51,6 +51,22 @@ def tiny_mnist_root(tmp_path):
     return root
 
 
+@pytest.fixture
+def tiny_cifar_root(tmp_path):
+    """Synthetic CIFAR-10 cache with the real shapes and dtypes."""
+    rng = np.random.default_rng(1)
+    root = tmp_path / "cifar"
+    root.mkdir()
+    np.savez(
+        root / "cifar10.npz",
+        x_train=rng.integers(0, 256, size=(256, 32, 32, 3), dtype=np.uint8),
+        y_train=rng.integers(0, 10, size=256, dtype=np.uint8),
+        x_test=rng.integers(0, 256, size=(64, 32, 32, 3), dtype=np.uint8),
+        y_test=rng.integers(0, 10, size=64, dtype=np.uint8),
+    )
+    return root
+
+
 def make_model(
     gen, hidden=(16, 16), in_features=32, out_features=4, bias_init=5.0, **kw
 ) -> MLP:

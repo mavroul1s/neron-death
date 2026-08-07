@@ -380,8 +380,12 @@ class Trainer:
             for li in range(model.n_hidden):
                 lin_in = model.incoming_linear(li)
                 lin_out = model.outgoing_linear(li)
+                # spatial > 1 only at a conv -> flatten -> Linear boundary,
+                # where each channel owns `spatial` contiguous columns of the
+                # next weight matrix (CLAUDE.md §5.5).
+                spatial = getattr(model, "outgoing_spatial", lambda _: 1)(li)
                 w_in_norm, w_out_norm = probes.neuron_weight_norms(
-                    lin_in.weight, lin_out.weight
+                    lin_in.weight, lin_out.weight, spatial=spatial
                 )
                 # Per-layer weight stats cover the layer's own (W, b). Norm-layer
                 # affine parameters are excluded here and counted in the

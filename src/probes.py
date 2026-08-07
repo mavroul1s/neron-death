@@ -338,18 +338,51 @@ def weight_stats(tensors: Iterable[torch.Tensor]) -> Tuple[float, float]:
     return l2, mean_abs
 
 
-def neuron_weight_norms(
-    w_in: torch.Tensor, w_out: torch.Tensor
-) -> Tuple[np.ndarray, np.ndarray]:
-    """Per-neuron incoming and outgoing weight norms for one hidden layer.
+def out_units(module) -> int:
+    """How many units a weight-bearing module produces.
 
-    ``w_in`` is (H, fan_in) -- the layer's own nn.Linear weight, so row i is
-    neuron i's incoming weights. ``w_out`` is (H_next, H) -- the *next*
-    layer's weight, so column i is neuron i's outgoing weights.
+    ``out_features`` for nn.Linear, ``out_channels`` for nn.Conv2d -- the conv
+    unit being the channel (CLAUDE.md §5.5).
     """
-    w_in_norm = _f64(w_in).pow(2).sum(dim=1).sqrt().cpu().numpy()
-    w_out_norm = _f64(w_out).pow(2).sum(dim=0).sqrt().cpu().numpy()
-    return w_in_norm, w_out_norm
+    for attr in ("out_features", "out_channels"):
+        if hasattr(module, attr):
+            return int(getattr(module, attr))
+    raise TypeError(f"{type(module).__name__} exposes no output-unit count")
+
+
+def neuron_weight_norms(
+    w_in: torch.Tensor, w_out: torch.Tensor, spatial: int = 1
+) -> Tuple[np.ndarray, np.ndarray]:
+    """Per-unit incoming and outgoing weight norms for one hidden layer.
+
+    Handles all three shapes the two architectures produce, because the unit
+    axis moves around and a wrong reduction here silently mislabels every
+    per-neuron weight column in the C4 dataset rather than raising:
+
+    ``w_in``  (U, ...)                 -- Linear (U, fan_in) or Conv2d
+                                          (C, C_in, kH, kW). Reduce everything
+                                          after the unit axis.
+    ``w_out`` (n_next, U)              -- next layer is Linear.
+              (C_next, U, kH, kW)      -- next layer is Conv2d; the unit is
+                                          axis 1, not axis 0.
+              (n_next, U * spatial)    -- next layer is Linear *after a
+                                          flatten*, so each unit owns `spatial`
+                                          contiguous columns. Pass
+                                          ``spatial = H*W`` for this case.
+    """
+    w_in_norm = _f64(w_in).flatten(1).pow(2).sum(dim=1).sqrt()
+
+    wo = _f64(w_out)
+    if spatial > 1:
+        # conv -> flatten -> Linear. Channel-major, matching `.reshape(N, -1)`
+        # on (N, C, H, W); see interventions.flattened_channel_columns.
+        wo = wo.reshape(wo.shape[0], -1, spatial)
+        w_out_norm = wo.pow(2).sum(dim=(0, 2)).sqrt()
+    else:
+        # Bring the unit axis to the front, then reduce everything else.
+        w_out_norm = wo.transpose(0, 1).flatten(1).pow(2).sum(dim=1).sqrt()
+
+    return w_in_norm.cpu().numpy(), w_out_norm.cpu().numpy()
 
 
 # ---------------------------------------------------------------------------
@@ -619,7 +652,7 @@ class GradientTracker:
             torch.zeros(self.window, device=dev) for _ in self.linears
         ]
         self._neuron_buf = [
-            torch.zeros(self.window, lin.out_features, device=dev)
+            torch.zeros(self.window, out_units(lin), device=dev)
             for lin in self.linears
         ]
         self._ptr = 0
@@ -644,7 +677,11 @@ class GradientTracker:
                 self._neuron_buf[j][i].zero_()
                 self._layer_buf[j][i].zero_()
                 continue
-            per_neuron_sq = gw.pow(2).sum(dim=1)
+            # flatten(1) so this works for a Linear gradient (U, fan_in) and a
+            # Conv2d gradient (C, C_in, kH, kW) alike: everything after the unit
+            # axis is the unit's incoming weights. Summing only dim 1 would
+            # leave (C, kH, kW) for a conv and then broadcast against the bias.
+            per_neuron_sq = gw.pow(2).flatten(1).sum(dim=1)
             gb = lin.bias.grad if lin.bias is not None else None
             if gb is not None:
                 per_neuron_sq = per_neuron_sq + gb.pow(2)
@@ -667,7 +704,7 @@ class GradientTracker:
 
     def neuron_mean(self, j: int) -> np.ndarray:
         if self._count == 0:
-            return np.full(self.linears[j].out_features, np.nan, dtype=np.float64)
+            return np.full(out_units(self.linears[j]), np.nan, dtype=np.float64)
         buf = self._neuron_buf[j][: self._count].to(torch.float64)
         return buf.mean(dim=0).cpu().numpy()
 
