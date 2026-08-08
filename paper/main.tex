@@ -737,8 +737,9 @@ small CNN on label-shuffled CIFAR-10, $\dexact$ finds $0.00\%$, $0.91\%$ and
 $0.00\%$ of channels dead while $81$--$88\%$ of all spatial positions in those
 layers are silent, and $\ddorm[0.1]$ flags $21$--$35\%$. The fully-connected
 layer in the same network reports $26.3\%$ dead. The definition is therefore not
-merely activation-dependent but layer-type-dependent: a channel can be $88\%$
-spatially silent and still count as fully alive. \emph{This measurement is
+merely activation-dependent but layer-type-dependent: the third convolutional
+layer is $86\%$ spatially silent with not one of its channels counted as dead.
+\emph{This measurement is
 reported on its own}; the CIFAR arm's learning-rate calibration failed
 (Section~\ref{sec:limitations}), so no plasticity or intervention result from
 that setting is used anywhere in this paper. A statement about what a definition
