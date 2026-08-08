@@ -45,29 +45,28 @@
 \def\ty{-2.35}
 \draw[black!45, line width=0.6pt] (-4.7,\ty) -- (7.1,\ty);
 \foreach \x/\lab in {-4.4/{task $t$}, -0.6/{task $t{+}1$}, 3.2/{task $t{+}2$}}{
-  \draw[black!45, line width=0.9pt] (\x,\ty-0.14) -- (\x,\ty+0.28);
-  \node[sub, anchor=south west] at (\x+0.06,\ty+0.28) {\lab};
+  \draw[black!45, line width=0.9pt] (\x,\ty-0.16) -- (\x,\ty+0.16);
+  \node[sub, anchor=north west] at (\x+0.08,\ty-0.18) {\lab};
 }
-\draw[black!45, line width=0.9pt] (7.0,\ty-0.14) -- (7.0,\ty+0.28);
+\draw[black!45, line width=0.9pt] (7.0,\ty-0.16) -- (7.0,\ty+0.16);
 
+% probe read-outs sit above the axis, recycling events below it
 \foreach \x in {-4.4, -0.6, 3.2, 7.0}{
-  \draw[cCur, line width=0.7pt] (\x,\ty+0.28) -- (\x,\ty+0.55);
-  \node[circle, fill=cCur, inner sep=1.1pt] at (\x,\ty+0.55) {};
+  \draw[cCur, line width=0.7pt] (\x,\ty+0.16) -- (\x,\ty+0.46);
+  \node[circle, fill=cCur, inner sep=1.1pt] at (\x,\ty+0.46) {};
 }
 \foreach \x in {-2.2, 1.6, 5.4}{
-  \draw[cEv, line width=0.7pt, densely dashed] (\x,\ty-0.14) -- (\x,\ty-0.42);
-  \node[circle, fill=cEv, inner sep=1.1pt] at (\x,\ty-0.42) {};
+  \draw[cEv, line width=0.7pt, densely dashed] (\x,\ty-0.16) -- (\x,\ty-0.62);
+  \node[circle, fill=cEv, inner sep=1.1pt] at (\x,\ty-0.62) {};
 }
-\node[sub, anchor=west] at (-4.7,\ty+0.85)
-  {\textcolor{cCur}{$\bullet$}~full probe at every task boundary: every metric,
-   on both batches, per neuron};
-\node[sub, anchor=west] at (-4.7,\ty-0.78)
-  {\textcolor{cEv}{$\bullet$}~recycling event: score every unit, select $k$,
-   reset --- fires every $F{=}1000$ optimizer steps against $469$ steps per
-   task,};
-\node[sub, anchor=west] at (-4.7,\ty-1.06)
-  {\phantom{\textcolor{cEv}{$\bullet$}~}so events and task boundaries are
-   deliberately unaligned};
+\node[sub, anchor=west, text=cCur] at (-4.7,\ty+0.80)
+  {$\bullet$~full probe at every task boundary: every metric, on both batches,
+   per neuron};
+\node[sub, anchor=west, text=cEv] at (-4.7,\ty-1.02)
+  {$\bullet$~recycling event: score every unit, select $k$, reset};
+\node[sub, anchor=west] at (-4.7,\ty-1.32)
+  {\phantom{$\bullet$~}every $F{=}1000$ optimizer steps against $469$ steps per
+   task, so events and boundaries are deliberately unaligned};
 
 \end{tikzpicture}
 \caption{\textbf{Setting and instrument.} A $784$--$500$--$500$--$500$--$10$
