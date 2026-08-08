@@ -570,67 +570,81 @@ def fig_c4_survival(
 # -- Figure 4: C4, the same living units, over and over -----------------------
 
 
-def fig_c4_recurrence(surv: Dict[str, pd.DataFrame], out: Path) -> Optional[Path]:
-    """How concentrated recycling is on particular units, against a same-dose null."""
-    rc, null = surv.get("recurrence"), surv.get("null")
-    if rc is None or rc.empty or not rc.n_recycled.any():
+def fig_c4_recurrence(
+    survs: Dict[str, Dict[str, pd.DataFrame]], out: Path
+) -> Optional[Path]:
+    """Which units recycling keeps choosing, and what state they were in.
+
+    Takes one survival directory **per arm**, because the comparison is the
+    argument. `random_matched` picks uniformly by construction, so it is the
+    negative control: if the concentration statistics do not read exactly the
+    same as the null on that arm, they are measuring something other than
+    targeting and nothing else here can be trusted.
+    """
+    arms = {
+        name: s for name, s in survs.items()
+        if s.get("recurrence") is not None
+        and not s["recurrence"].empty
+        and s["recurrence"].n_recycled.any()
+    }
+    if not arms:
         return None
-    r = rc[rc.probe == "reference"]
+    order = [a for a in ARM_ORDER if a in arms] + [a for a in arms if a not in ARM_ORDER]
 
-    fig, (ax_hist, ax_state) = plt.subplots(1, 2, figsize=(6.6, 2.8))
+    fig, (ax_hist, ax_state) = plt.subplots(1, 2, figsize=(7.4, 2.9))
 
-    # -- (a) distribution of per-unit recycle counts, observed vs null
-    obs = r.groupby(["run_id", "layer_idx", "neuron_idx"]).n_recycled.first().to_numpy()
-    bins = np.arange(0, obs.max() + 3) - 0.5
-    ax_hist.hist(obs, bins=bins, color=SLOT[0], alpha=0.85, zorder=3, density=True)
-    ax_hist.axvline(obs.mean(), color=INK_2, lw=1.2, ls=(0, (4, 2)), zorder=4)
-    ax_hist.annotate(
-        f"mean {obs.mean():.0f}", xy=(obs.mean(), 0.99), xycoords=("data", "axes fraction"),
-        xytext=(-4, -2), textcoords="offset points", fontsize=7.5, color=INK_2,
-        va="top", ha="right",
-    )
-    # The null holds the per-task, per-layer dose fixed and redraws only *which*
-    # units, so any excess concentration is targeting, not dose.
-    never = 100 * (obs == 0).mean()
-    lines = [f"{never:.1f}% of units never recycled once"]
-    if null is not None and not null.empty:
-        obs_gini = concentration(obs)["gini"]
-        q = np.percentile(null.gini.to_numpy(), [2.5, 97.5])
-        lines += [
-            f"Gini {obs_gini:.2f}",
-            f"same-dose null: {null.gini.mean():.2f} [{q[0]:.2f}, {q[1]:.2f}],",
-            "and it leaves no unit untouched",
-        ]
-    ax_hist.annotate(
-        "\n".join(lines), xy=(0.97, 0.88), xycoords="axes fraction",
-        fontsize=7.5, color=INK_2, va="top", ha="right", linespacing=1.45,
-        # The block spans the mean line; a surface-coloured plate keeps both
-        # readable instead of interleaving text with a dashed rule.
-        bbox=dict(facecolor=SURFACE, edgecolor="none", alpha=0.94, pad=3.0),
-    )
+    # -- (a) how unevenly the recycling slots were spread over units
+    labels, ginis, nulls, colours = [], [], [], []
+    for arm in order:
+        s = arms[arm]
+        r = s["recurrence"][s["recurrence"].probe == "reference"]
+        obs = r.groupby(["run_id", "layer_idx", "neuron_idx"]).n_recycled.first().to_numpy()
+        colour = ARM_COLOR.get(arm, SLOT[0])
+        ax_hist.hist(obs, bins=np.arange(0, obs.max() + 3) - 0.5, density=True,
+                     histtype="step", lw=1.8, color=colour, zorder=3)
+        labels.append(ARM_LABEL.get(arm, arm))
+        colours.append(colour)
+        ginis.append(concentration(obs)["gini"])
+        null = s.get("null")
+        nulls.append(float(null.gini.mean()) if null is not None and not null.empty
+                     else float("nan"))
     ax_hist.set_xlabel("times a unit was recycled")
     ax_hist.set_ylabel("density of units")
-    ax_hist.set_title("(a) recycling concentrates on some units", loc="left",
+    ax_hist.set_title("(a) how concentrated the choice is", loc="left",
                       fontsize=8.5, color=INK_2)
+    rows = [
+        f"{lab}: Gini {g:.2f}" + ("" if np.isnan(n) else f"  (null {n:.2f})")
+        for lab, g, n in zip(labels, ginis, nulls)
+    ]
+    ax_hist.annotate(
+        "\n".join(rows), xy=(0.97, 0.93), xycoords="axes fraction", ha="right",
+        va="top", fontsize=7.5, color=INK_2, linespacing=1.5,
+        bbox=dict(facecolor=SURFACE, edgecolor="none", alpha=0.94, pad=3.0),
+    )
     _grid(ax_hist)
 
-    # -- (b) what state were they in?
-    tot_dead = r.n_recycled_while_dead.sum()
-    tot_alive = r.n_recycled_while_alive.sum()
-    share = 100 * np.array([tot_alive, tot_dead]) / (tot_alive + tot_dead)
-    ax_state.barh([1, 0], share, color=[SLOT[1], SLOT[0]], height=0.34,
-                  zorder=3, edgecolor=SURFACE, linewidth=1.0)
-    ax_state.set_yticks([1, 0], ["alive when chosen", "genuinely dead"])
-    for y, v in zip([1, 0], share):
-        ax_state.annotate(f"{v:.1f}%", (v, y), xytext=(4, 0),
+    # -- (b) alive or dead when chosen, per arm
+    ys = np.arange(len(order))[::-1]
+    for y, arm, colour in zip(ys, order, colours):
+        r = arms[arm]["recurrence"]
+        r = r[r.probe == "reference"]
+        alive = r.n_recycled_while_alive.sum()
+        dead = r.n_recycled_while_dead.sum()
+        pct = 100 * alive / (alive + dead)
+        ax_state.barh([y], [pct], color=colour, height=0.42, zorder=3,
+                      edgecolor=SURFACE, linewidth=1.0)
+        ax_state.annotate(f"{pct:.1f}%", (pct, y), xytext=(4, 0),
                           textcoords="offset points", va="center",
                           fontsize=8.5, color=INK, fontweight="semibold")
-    ax_state.set_xlim(0, 108)
-    ax_state.set_xlabel("% of all (unit, event) recycling slots")
+    ax_state.set_yticks(ys, [ARM_LABEL.get(a, a) for a in order])
+    ax_state.set_xlim(0, 112)
+    ax_state.set_xlabel("% of recycling slots where the unit was ALIVE")
     ax_state.set_title("(b) state at the boundary before", loc="left",
                        fontsize=8.5, color=INK_2)
     _grid(ax_state, axis="x")
 
+    fig.suptitle("Recycling the living", x=0.0, ha="left", y=1.05,
+                 fontsize=9.5, fontweight="semibold", color=INK)
     fig.tight_layout()
     return _save(fig, out, "fig4_c4_recurrence")
 
@@ -1090,16 +1104,41 @@ def build_all(
             made.append(path)
 
     # Several survival directories may be given: the C4 mortality figure needs
-    # runs with no intervention, the recurrence figure needs runs with one, and
-    # no single sweep supplies both.
+    # runs with no intervention, the recurrence figure compares arms that had
+    # one, and no single sweep supplies both.
+    loaded: Dict[str, Dict[str, pd.DataFrame]] = {}
     for d in survival_dirs or []:
         surv = {p.stem: pd.read_parquet(p) for p in sorted(Path(d).glob("*.parquet"))}
-        for fn, kwargs in ((fig_c4_survival, {"ex": ex}), (fig_c4_recurrence, {})):
-            path = fn(surv, out, **kwargs)
-            if path:
-                print(f"  wrote {fn.__name__} -> {path.name}   [{Path(d).name}]")
-                made.append(path)
+        loaded[_arm_of_survival(surv, Path(d).name)] = surv
+        path = fig_c4_survival(surv, out, ex=ex)
+        if path:
+            print(f"  wrote fig_c4_survival -> {path.name}   [{Path(d).name}]")
+            made.append(path)
+
+    if loaded:
+        path = fig_c4_recurrence(loaded, out)
+        if path:
+            print(f"  wrote fig_c4_recurrence -> {path.name}   "
+                  f"[{', '.join(sorted(loaded))}]")
+            made.append(path)
     return made
+
+
+def _arm_of_survival(surv: Dict[str, pd.DataFrame], fallback: str) -> str:
+    """Name the arm from the run_ids inside, not from the directory name.
+
+    A directory called `surv_random` is a convention; `tau_random_matched_*` in
+    the data is the fact. Mislabelling an arm in this figure would invert its
+    argument, so it is read from the runs.
+    """
+    rc = surv.get("recurrence")
+    if rc is None or rc.empty:
+        return fallback
+    ids = " ".join(rc.run_id.unique()[:5])
+    for arm in ("random_matched", "inverse_matched", "redo"):
+        if arm in ids:
+            return arm
+    return fallback
 
 
 def main(argv=None) -> int:
