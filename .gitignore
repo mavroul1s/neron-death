@@ -24,3 +24,10 @@ venv/
 
 # Staged Kaggle uploads, rebuilt by scripts/package_for_kaggle.py
 kaggle_upload/
+
+# The manuscript. Only the compiled PDF is pushed -- the LaTeX sources, the
+# vendored TMLR style files, the copied figures and the build intermediates are
+# all reproducible from this repo (`bash paper/build.sh`), so committing them
+# would add churn without adding information.
+paper/*
+!paper/recycling_the_living.pdf
