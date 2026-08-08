@@ -63,9 +63,9 @@
   2/{inverse-matched}/cInv/{7,8,9,10,11}/{the $k$ \emph{highest}-scoring units}%
 }{
   \pgfmathsetmacro\yy{\rowy - \arm*0.95}
-  \node[desc, anchor=east, text=\col] at (-0.60,\yy+0.19)
+  \node[desc, anchor=east, text=\col] at (-0.60,\yy+0.235)
     {\textbf{\footnotesize \name}};
-  \node[desc, anchor=east] at (-0.60,\yy-0.16) {\note};
+  \node[desc, anchor=east] at (-0.60,\yy-0.185) {\note};
   \foreach \i in {0,...,11}{
     \pgfmathsetmacro\xx{\i*\ux}
     \ifnum\i<3 \node[dead]  at (\xx,\yy) {}; \else

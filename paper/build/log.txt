@@ -534,10 +534,7 @@ Package natbib Warning: Citation `agarwal2021deep' on page 6 undefined on input
 
 LaTeX Warning: Reference `tab:tau' on page 7 undefined on input line 549.
 
-
-Underfull \vbox (badness 10000) has occurred while \output is active [7 <./figu
-res/fig1_tau_sweep.pdf>]
-Underfull \vbox (badness 4001) has occurred while \output is active [8]
+[7] [8 <./figures/fig1_tau_sweep.pdf>]
 
 Package natbib Warning: Citation `sokar2023dormant' on page 9 undefined on inpu
 t line 594.
@@ -582,11 +579,12 @@ ut line 825.
 Package natbib Warning: Citation `ash2020warm' on page 12 undefined on input li
 ne 834.
 
+
+LaTeX Warning: Reference `sec:c4' on page 12 undefined on input line 851.
+
 [12 <./figures/fig7_c3_anomaly.pdf>]
-
-LaTeX Warning: Reference `sec:c4' on page 13 undefined on input line 851.
-
-[13 <./figures/fig3_c4_survival.pdf>]
+Underfull \vbox (badness 1019) has occurred while \output is active [13 <./figu
+res/fig3_c4_survival.pdf>]
 
 LaTeX Warning: Reference `fig:recur' on page 14 undefined on input line 939.
 
@@ -598,7 +596,9 @@ n input line 972.
 Package natbib Warning: Citation `loshchilov2019decoupled' on page 14 undefined
  on input line 975.
 
-[14 <./figures/fig4_c4_recurrence.pdf>]
+
+Underfull \vbox (badness 10000) has occurred while \output is active [14 <./fig
+ures/fig4_c4_recurrence.pdf>]
 
 Package natbib Warning: Citation `lyle2023understanding' on page 15 undefined o
 n input line 989.
@@ -811,7 +811,7 @@ eX/fonts/type1/public/lm/lmsy9.pfb><C:/Users/nickb/AppData/Local/Programs/MiKTe
 X/fonts/type1/public/lm/lmtt10.pfb><C:/Users/nickb/AppData/Local/Programs/MiKTe
 X/fonts/type1/public/amsfonts/symbols/msbm10.pfb>
 Output written on C:\Users\nickb\Documents\projects\neuron-death\paper\build\ma
-in.pdf (22 pages, 894690 bytes).
+in.pdf (22 pages, 894632 bytes).
 Transcript written on C:\Users\nickb\Documents\projects\neuron-death\paper\buil
 d\main.log.
 Latexmk: Getting log file 'build/main.log'
@@ -1314,10 +1314,7 @@ t line 428.
 Package natbib Warning: Citation `agarwal2021deep' on page 6 undefined on input
  line 458.
 
-[6]
-Underfull \vbox (badness 10000) has occurred while \output is active [7 <./figu
-res/fig1_tau_sweep.pdf>]
-Underfull \vbox (badness 4001) has occurred while \output is active [8]
+[6] [7] [8 <./figures/fig1_tau_sweep.pdf>]
 
 Package natbib Warning: Citation `sokar2023dormant' on page 9 undefined on inpu
 t line 594.
@@ -1343,7 +1340,9 @@ ut line 825.
 Package natbib Warning: Citation `ash2020warm' on page 12 undefined on input li
 ne 834.
 
-[12 <./figures/fig7_c3_anomaly.pdf>] [13 <./figures/fig3_c4_survival.pdf>]
+[12 <./figures/fig7_c3_anomaly.pdf>]
+Underfull \vbox (badness 1019) has occurred while \output is active [13 <./figu
+res/fig3_c4_survival.pdf>]
 
 Package natbib Warning: Citation `lyle2023understanding' on page 14 undefined o
 n input line 972.
@@ -1352,7 +1351,9 @@ n input line 972.
 Package natbib Warning: Citation `loshchilov2019decoupled' on page 14 undefined
  on input line 975.
 
-[14 <./figures/fig4_c4_recurrence.pdf>]
+
+Underfull \vbox (badness 10000) has occurred while \output is active [14 <./fig
+ures/fig4_c4_recurrence.pdf>]
 
 Package natbib Warning: Citation `lyle2023understanding' on page 15 undefined o
 n input line 989.
@@ -1445,9 +1446,6 @@ Package natbib Warning: Citation `dohare2024loss' on page 20 undefined on input
 
 [20]
 
-LaTeX Warning: `h' float specifier changed to `ht'.
-
-
 Package natbib Warning: Citation `dohare2024loss' on page 21 undefined on input
  line 1416.
 
@@ -1458,14 +1456,18 @@ Package natbib Warning: Citation `dohare2024loss' on page 21 undefined on input
 
 LaTeX Warning: `h' float specifier changed to `ht'.
 
+[21]
 
 LaTeX Warning: `h' float specifier changed to `ht'.
 
 
 LaTeX Warning: `h' float specifier changed to `ht'.
 
-[21] [22 <./figures/fig5_gate_dose_response.pdf>] [23 <./figures/fig9_setting3_
-activations.pdf> <./figures/fig8_c5_optimizers.pdf>]
+
+Underfull \vbox (badness 10000) has occurred while \output is active [22 <./fig
+ures/fig5_gate_dose_response.pdf> <./figures/fig9_setting3_activations.pdf>]
+Underfull \vbox (badness 10000) has occurred while \output is active [23 <./fig
+ures/fig8_c5_optimizers.pdf>]
 
 Package natbib Warning: There were undefined citations.
 
@@ -1511,7 +1513,7 @@ eX/fonts/type1/public/lm/lmsy9.pfb><C:/Users/nickb/AppData/Local/Programs/MiKTe
 X/fonts/type1/public/lm/lmtt10.pfb><C:/Users/nickb/AppData/Local/Programs/MiKTe
 X/fonts/type1/public/amsfonts/symbols/msbm10.pfb>
 Output written on C:\Users\nickb\Documents\projects\neuron-death\paper\build\ma
-in.pdf (24 pages, 925966 bytes).
+in.pdf (24 pages, 926157 bytes).
 Transcript written on C:\Users\nickb\Documents\projects\neuron-death\paper\buil
 d\main.log.
 Latexmk: Getting log file 'build/main.log'
@@ -1952,7 +1954,7 @@ eX/fonts/type1/public/lm/lmsy9.pfb><C:/Users/nickb/AppData/Local/Programs/MiKTe
 X/fonts/type1/public/lm/lmtt10.pfb><C:/Users/nickb/AppData/Local/Programs/MiKTe
 X/fonts/type1/public/amsfonts/symbols/msbm10.pfb>
 Output written on C:\Users\nickb\Documents\projects\neuron-death\paper\build\ma
-in.pdf (24 pages, 952007 bytes).
+in.pdf (24 pages, 952015 bytes).
 Transcript written on C:\Users\nickb\Documents\projects\neuron-death\paper\buil
 d\main.log.
 Latexmk: Getting log file 'build/main.log'
@@ -2390,7 +2392,7 @@ eX/fonts/type1/public/lm/lmsy9.pfb><C:/Users/nickb/AppData/Local/Programs/MiKTe
 X/fonts/type1/public/lm/lmtt10.pfb><C:/Users/nickb/AppData/Local/Programs/MiKTe
 X/fonts/type1/public/amsfonts/symbols/msbm10.pfb>
 Output written on C:\Users\nickb\Documents\projects\neuron-death\paper\build\ma
-in.pdf (24 pages, 952007 bytes).
+in.pdf (24 pages, 952015 bytes).
 Transcript written on C:\Users\nickb\Documents\projects\neuron-death\paper\buil
 d\main.log.
 Latexmk: Getting log file 'build/main.log'
