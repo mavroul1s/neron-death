@@ -960,19 +960,32 @@ def fig_setting3_activations(
         ("dead_exact  (Dohare et al.)", SLOT[0], "dead_exact_frac_ref"),
         (r"dormant $\tau$=0.1  (Sokar et al.)", SLOT[1], "dormant_frac_tau_0p1_ref"),
         ("dead_absolute a=1e-2  (ours)", SLOT[2], "dead_abs_frac_1em02_ref"),
+        # Defined only for bounded activations, so it is absent everywhere but
+        # tanh -- and on tanh it is the ONLY definition that fires at all.
+        # Omitting it made the tanh group read as "nothing is wrong here", which
+        # is the opposite of what those runs show.
+        ("saturated  (bounded only)", SLOT[3], "saturated_frac_ref"),
     ]
     acts = [a for a in ("relu", "leaky_relu", "gelu", "silu", "tanh")
             if a in set(m.activation)]
     xs = np.arange(len(acts))
-    width = 0.26
+    width = 0.20
 
-    fig, ax = plt.subplots(figsize=(6.2, 3.0))
+    fig, ax = plt.subplots(figsize=(7.0, 3.0))
     for i, (label, colour, col) in enumerate(cols):
-        vals = [m[m.activation == a][col].mean() * 100 for a in acts]
-        pos = xs + (i - 1) * (width + 0.02)
+        vals = []
+        for a in acts:
+            sub = m[m.activation == a]
+            vals.append(
+                sub[col].mean() * 100
+                if col in sub and sub[col].notna().any() else np.nan
+            )
+        pos = xs + (i - 1.5) * (width + 0.02)
         ax.bar(pos, vals, width, color=colour, label=label, zorder=3,
                edgecolor=SURFACE, linewidth=1.0)
         for x, v in zip(pos, vals):
+            if np.isnan(v):
+                continue  # undefined for this activation; a 0 here would be a lie
             # A zero bar is invisible, and "exactly zero" is the whole finding.
             ax.annotate("0" if v == 0 else f"{v:.0f}", (x, v), xytext=(0, 2),
                         textcoords="offset points", ha="center", fontsize=7,
@@ -980,10 +993,10 @@ def fig_setting3_activations(
                         fontweight="semibold" if v == 0 else "normal")
     ax.set_xticks(xs, [a.replace("_", "-") for a in acts])
     ax.set_ylabel("% of units flagged, late window")
-    ax.set_title("Under GELU and SiLU the Nature paper's definition finds nothing",
+    ax.set_title("Change the activation and the definitions stop agreeing",
                  loc="left")
-    ax.legend(loc="lower left", bbox_to_anchor=(0, 1.06), ncol=3,
-              columnspacing=1.2, handlelength=1.4)
+    ax.legend(loc="lower left", bbox_to_anchor=(0, 1.06), ncol=4,
+              columnspacing=1.0, handlelength=1.3)
     _grid(ax)
     return _save(fig, out, "fig9_setting3_activations")
 
