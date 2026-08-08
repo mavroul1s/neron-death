@@ -207,3 +207,20 @@ runs with local extracts** — gate 5.53 · tau_a 15.21 · tau_b 12.57 · tau_c
 "~62 GPU-h" in `README.md` was an estimate made before the C3 and tanh-gate
 sessions were counted; 77.71 h is the number the paper's compute appendix uses.
 The 25 Setting 2 runs are excluded — no local extract.
+
+### 2026-08-08 — `fig8_c5_optimizers`: colliding series labels, no GPU
+
+Found while reviewing the typeset appendix. The four optimizer arms were direct-
+labelled at their final data point, and Adam and AdamW finish **0.3 pp apart on a
+65 pp axis** — the two labels rendered as one unreadable smear. `sgd` and
+`adam_lyle` collided the same way lower down.
+
+Fixed with a new `figures._end_labels` helper: labels are placed in ascending
+order and pushed apart to clear a minimum vertical gap, with a short leader line
+wherever a label had to move. Labels are also now anchored to the **mean of the
+last 10 points** rather than the single final one — `sgd` and `adam_lyle` cross
+repeatedly near the right edge, so final-point order was the *opposite* of the
+order a reader sees over the last stretch, and a label order that contradicts the
+picture is worse than no label.
+
+No data changed; the plotted series are identical. 153 tests still pass.
