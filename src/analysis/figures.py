@@ -103,6 +103,38 @@ def _grid(ax, axis: str = "y") -> None:
     ax.set_axisbelow(True)
 
 
+def _end_labels(ax, entries, min_gap_frac: float = 0.085) -> None:
+    """Label series at their right-hand endpoint, nudged apart where they collide.
+
+    ``entries`` is ``[(text, x, y, colour), ...]``. Annotating each series at its
+    own final value is the clearest form of direct labelling until two series end
+    close together -- Adam and AdamW finish 0.9 pp apart on a 60 pp axis, which
+    renders as one unreadable smear of two overlapping words. This walks the
+    labels in order and pushes each one up until it clears its predecessor by
+    ``min_gap_frac`` of the y-range, drawing a short leader line wherever the
+    label had to move so it still reads as belonging to its own curve.
+    """
+    if not entries:
+        return
+    lo, hi = ax.get_ylim()
+    span = hi - lo
+    if span <= 0:
+        return
+    gap = span * min_gap_frac
+    placed = []
+    for text, x, y, colour in sorted(entries, key=lambda e: e[2]):
+        y_lab = y if not placed else max(y, placed[-1] + gap)
+        placed.append(y_lab)
+        ax.annotate(
+            text, xy=(x, y_lab), xytext=(5, 0), textcoords="offset points",
+            va="center", fontsize=7.5, color=colour, fontweight="semibold",
+            annotation_clip=False,
+        )
+        if abs(y_lab - y) > gap * 0.25:
+            ax.plot([x, x], [y, y_lab], color=colour, lw=0.6, alpha=0.55,
+                    zorder=2, clip_on=False)
+
+
 def _save(fig, out: Path, name: str) -> Path:
     out.mkdir(parents=True, exist_ok=True)
     fig.savefig(out / f"{name}.pdf", bbox_inches="tight")
@@ -892,14 +924,14 @@ def fig_c5_optimizers(ex: Extracts, out: Path, lr: Optional[float] = None) -> Op
         # where every arm's death count is moving for reasons that have nothing
         # to do with distance from a switch.
         late = it[it.task_idx >= 50]
+        ends = []
         for arm in arms:
             g = late[late._arm == arm].groupby("step_in_task").dead_exact_frac.mean() * 100
             if g.empty:
                 continue
             ax_step.plot(g.index, g.values, color=colours[arm], lw=1.8)
-            ax_step.annotate(arm.replace("_", " "), xy=(g.index[-1], g.values[-1]),
-                             xytext=(4, 0), textcoords="offset points", va="center",
-                             fontsize=7.5, color=colours[arm], fontweight="semibold")
+            ends.append((arm.replace("_", " "), g.index[-1], g.values[-1], colours[arm]))
+        _end_labels(ax_step, ends)
         ax_step.set_xlabel("optimizer steps since the task switch")
         ax_step.set_ylabel("% dead_exact")
         ax_step.set_title("(a) within a task: the predicted spike", loc="left",
@@ -910,14 +942,14 @@ def fig_c5_optimizers(ex: Extracts, out: Path, lr: Optional[float] = None) -> Op
     m = metrics[metrics.probe_point == "task_end"].merge(
         runs[["run_id", "_arm"]], on="run_id", how="inner"
     )
+    ends = []
     for arm in arms:
         g = m[m._arm == arm].groupby("task_idx").dead_exact_frac_ref.mean() * 100
         if g.empty:
             continue
         ax_task.plot(g.index, g.values, color=colours[arm], lw=1.8)
-        ax_task.annotate(arm.replace("_", " "), xy=(g.index[-1], g.values[-1]),
-                         xytext=(4, 0), textcoords="offset points", va="center",
-                         fontsize=7.5, color=colours[arm], fontweight="semibold")
+        ends.append((arm.replace("_", " "), g.index[-1], g.values[-1], colours[arm]))
+    _end_labels(ax_task, ends)
     ax_task.set_xlabel("task")
     ax_task.set_ylabel("% dead_exact")
     ax_task.set_title(
