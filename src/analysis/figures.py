@@ -108,11 +108,17 @@ def _end_labels(ax, entries, min_gap_frac: float = 0.085) -> None:
 
     ``entries`` is ``[(text, x, y, colour), ...]``. Annotating each series at its
     own final value is the clearest form of direct labelling until two series end
-    close together -- Adam and AdamW finish 0.9 pp apart on a 60 pp axis, which
+    close together -- Adam and AdamW finish 0.3 pp apart on a 65 pp axis, which
     renders as one unreadable smear of two overlapping words. This walks the
     labels in order and pushes each one up until it clears its predecessor by
     ``min_gap_frac`` of the y-range, drawing a short leader line wherever the
     label had to move so it still reads as belonging to its own curve.
+
+    Callers should pass a *trailing mean* rather than the single last point for
+    ``y`` where the series are noisy. Two curves that cross repeatedly near the
+    right edge can end in the opposite order to the one a reader sees over the
+    last stretch, and a label order that contradicts the visual impression is
+    worse than no label at all.
     """
     if not entries:
         return
@@ -930,7 +936,8 @@ def fig_c5_optimizers(ex: Extracts, out: Path, lr: Optional[float] = None) -> Op
             if g.empty:
                 continue
             ax_step.plot(g.index, g.values, color=colours[arm], lw=1.8)
-            ends.append((arm.replace("_", " "), g.index[-1], g.values[-1], colours[arm]))
+            ends.append((arm.replace("_", " "), g.index[-1],
+                         float(g.values[-_TAIL:].mean()), colours[arm]))
         _end_labels(ax_step, ends)
         ax_step.set_xlabel("optimizer steps since the task switch")
         ax_step.set_ylabel("% dead_exact")
