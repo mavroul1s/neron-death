@@ -89,17 +89,56 @@ than about plasticity loss.
 
 ---
 
-## 2026-08-08 — Setting 2 regenerated at the calibrated learning rate
+## 2026-08-08 — Setting 2 gate result: BOTH rungs collapse. Notebook 10 is blocked.
 
-**Change:** `configs/setting2/` regenerated at the learning rate that passes
-`configs/setting2_gate/` (lr ∈ {0.03, 0.1}, 200 tasks, baseline only).
+**Result, not a change.** `configs/setting2_gate/` (lr ∈ {0.03, 0.1}, 200 tasks,
+baseline only, 5 seeds each) ran as notebook 9. **The frozen criterion returns
+PASS at both learning rates, and both passes are spurious.**
 
-**Reason:** the failure above. This is the same manipulation check §A.4 applied
-to Setting 1, run for the same reason and decided by the same criterion.
+| lr | early acc | late acc | drop | frozen verdict | health check |
+|---|---:|---:|---:|---|---|
+| 0.03 | 46.68% | **9.91%** | 36.75 pp | PASS | **COLLAPSED** |
+| 0.1 | 29.22% | **9.95%** | 20.11 pp | PASS | **COLLAPSED** |
 
-**Status: PENDING — do not run notebook 10 until this entry names the lr.**
-Notebook 9 is producing the gate data now. Fill in the passing lr here, then
-regenerate, re-upload the code Dataset, and run.
+Late accuracy is chance for ten classes at both. The supporting evidence is
+unambiguous and consistent across every seed:
+
+- **mean loss = 2.303 = ln(10)** exactly — the loss of a uniform predictor;
+- **gradient norm = 0.0 in every layer** — no parameter is moving any more;
+- **weight L2 frozen** from task ~30 (lr=0.03) and task ~20 (lr=0.1);
+- the **fully-connected layer is 99.8% / 100% `dead_exact`**, effective rank
+  0.20 / 0.00.
+
+The FC layer died completely, so no gradient reaches anything upstream and
+training stops permanently. That is a dying-ReLU collapse of the whole network,
+**not** loss of plasticity: accuracy fell because training stopped, not because
+the network became unable to fit new labels.
+
+**Why the frozen criterion cannot see it.** Its two conditions are "accuracy
+fell ≥ 3 pp with CI excluding zero" and "`dead_exact` rose". A network that dies
+completely satisfies both *maximally* — accuracy falls as far as it possibly
+can, and every unit ends up dead — so a total collapse produces the most
+emphatic possible PASS. This is a real limitation of the frozen gate. **It is
+being reported, not fixed**: the plan is not amended, `GateResult.passed` still
+reports the criterion verbatim, and the health check is a separate advisory
+(`gate.collapse_diagnosis`, added 2026-08-08) that sets `usable` alongside it.
+The same check was already performed by hand before the Setting 1 gate was
+accepted (CLAUDE.md §11, "lr=0.1 is a healthy regime, not a diverged one"); it
+is now written down so it cannot be skipped.
+
+**Consequence: do NOT run notebook 10 at either learning rate.** Both would
+produce 15 runs of a dead network.
+
+**What we now know bounds the answer.** lr=0.01 over 50 tasks gave *rising*
+accuracy (45.10% → 56.63%, no plasticity loss); lr=0.03 over 200 tasks gives
+total collapse by task 30. The usable setting, if it exists, is between them —
+and note lr=0.01 has **never been run at 200 tasks**, so its 50-task rise may
+simply be the pre-decline phase. That is the cheapest thing to test.
+
+**Proposed next rung — PENDING, needs a decision:** extend
+`configs/setting2_gate/` with lr ∈ {0.01, 0.02} at 200 tasks, 5 seeds, ~1.1
+GPU-h. CLAUDE.md §3 also ranks *reducing batch size* ahead of any further
+learning-rate move, which applies here too and is untried in Setting 2.
 
 ## 2026-08-08 — Setting 2 horizon 50 → 200 tasks
 
@@ -116,4 +155,4 @@ inside the frozen windows and needs no bespoke analysis.
 
 **Cost:** ~0.4 → ~1.6 GPU-h. `n_tasks` is a calibrated field under §3.
 
-**Status: PENDING — decide together with the entry above.**
+**Status: PENDING — moot until a learning rate survives the gate.**

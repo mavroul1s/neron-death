@@ -11,6 +11,7 @@ from __future__ import annotations
 import copy
 import json
 
+import pandas as pd
 import numpy as np
 import pytest
 
@@ -173,3 +174,70 @@ def test_failing_gate_reports_the_prespecified_response():
     text = gate_mod.report([r], gate_mod.load_plan())
     assert "raise the learning rate" in text
     assert "Forbidden: weakening the criterion" in text
+
+
+# -- the collapse health check (advisory, not part of the frozen criterion) ----
+
+
+def _fake_run(root, run_id, *, accuracy, loss, grad_norm, n_tasks=6):
+    """A minimal run tree: enough for `load_run` and `collapse_diagnosis`."""
+    d = root / run_id
+    d.mkdir(parents=True, exist_ok=True)
+    cfg = {"run_id": run_id, "seed": 0, "optim": {"lr": 0.03, "name": "sgd"},
+           "data": {"name": "label_shuffled_cifar10", "n_tasks": n_tasks}}
+    (d / "config.json").write_text(json.dumps(cfg), encoding="utf-8")
+    (d / "summary.json").write_text(json.dumps({"status": "complete"}), encoding="utf-8")
+    pd.DataFrame([
+        {"run_id": run_id, "task_idx": t, "probe_point": "task_end",
+         "online_accuracy": accuracy, "mean_loss": loss}
+        for t in range(n_tasks)
+    ]).to_parquet(d / "tasks.parquet")
+    pd.DataFrame([
+        {"run_id": run_id, "task_idx": t, "probe_point": "task_end", "layer_idx": l,
+         "n_neurons": 10, "dead_exact_count": 5, "dead_exact_count_ref": 5,
+         "grad_norm_layer": grad_norm}
+        for t in range(n_tasks) for l in range(2)
+    ]).to_parquet(d / "metrics.parquet")
+    return d
+
+
+def test_collapse_check_catches_a_network_that_stopped_training(tmp_path):
+    """Chance accuracy + ln(10) loss + zero gradient = the network died.
+
+    The frozen criterion reads this as the most emphatic possible PASS, because
+    accuracy fell as far as it can and every unit ended up dead. The health
+    check is what keeps that from being accepted as the phenomenon.
+    """
+    plan = _short_plan(n_tasks=6, n_seeds=1)
+    root = tmp_path / "runs"
+    _fake_run(root, "s2gate_collapsed_s0", accuracy=0.0991,
+              loss=float(np.log(10)), grad_norm=0.0)
+    runs = load_runs(root, "s2gate_*")
+    msg = gate_mod.collapse_diagnosis(runs, plan)
+    assert msg is not None
+    assert "chance" in msg and "ln(10)" in msg
+
+
+def test_collapse_check_passes_a_healthy_run(tmp_path):
+    """Setting 1 at lr=0.1 drops 4.5 pp and stays far above chance; flagging it
+    would make the check useless."""
+    plan = _short_plan(n_tasks=6, n_seeds=1)
+    root = tmp_path / "runs"
+    _fake_run(root, "s2gate_healthy_s0", accuracy=0.877, loss=0.47, grad_norm=0.9)
+    runs = load_runs(root, "s2gate_*")
+    assert gate_mod.collapse_diagnosis(runs, plan) is None
+
+
+def test_collapse_does_not_alter_the_frozen_verdict(tmp_path):
+    """`passed` must keep reporting the frozen criterion exactly; only `usable`
+    combines it with the health check."""
+    plan = _short_plan(n_tasks=6, n_seeds=1)
+    root = tmp_path / "runs"
+    _fake_run(root, "s2gate_collapsed_s0", accuracy=0.0991,
+              loss=float(np.log(10)), grad_norm=0.0)
+    runs = load_runs(root, "s2gate_*")
+    r = gate_mod.evaluate_gate(runs, plan, 0.03)
+    assert r.collapse is not None
+    assert r.passed == (r.accuracy_pass and r.dead_pass)
+    assert r.usable is False
+    assert "COLLAPSED" in gate_mod.report([r], plan)
