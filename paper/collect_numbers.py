@@ -312,6 +312,8 @@ for act in sorted(EX.runs[EX.runs.run_id.str.startswith("s3_")].activation.uniqu
         "dormant_0p1_pct": late_metric(rid, "dormant_frac_tau_0p1"),
         "dead_abs_1em02_pct": late_metric(rid, "dead_abs_frac_1em02"),
         "saturated_pct": late_metric(rid, "saturated_frac"),
+        "saturated_ref_pct": late_metric(rid, "saturated_frac_ref"),
+        "dead_exact_ref_pct": late_metric(rid, "dead_exact_frac_ref"),
         "erank": late_erank(rid),
         "n_seeds": len(rid),
     }
@@ -329,6 +331,8 @@ for lr in sorted(EX.runs[EX.runs.run_id.str.startswith("s3tanh")].lr.unique()):
         "dormant_0p1_pct": late_metric(rid, "dormant_frac_tau_0p1"),
         "dead_abs_1em02_pct": late_metric(rid, "dead_abs_frac_1em02"),
         "saturated_pct": late_metric(rid, "saturated_frac"),
+        "saturated_ref_pct": late_metric(rid, "saturated_frac_ref"),
+        "dead_exact_ref_pct": late_metric(rid, "dead_exact_frac_ref"),
         "erank": late_erank(rid),
         "n_seeds": len(rid),
     }
@@ -350,6 +354,7 @@ def sweep_table(prefix, key_fn, baseline_key):
             "early": est(rid, EARLY),
             "drop_pp": 100 * (iqm(a) - iqm(b)),
             "dead_exact_pct": late_metric(rid, "dead_exact_frac"),
+            "dead_exact_ref_pct": late_metric(rid, "dead_exact_frac_ref"),
             "dead_abs_1em02_pct": late_metric(rid, "dead_abs_frac_1em02"),
             "dormant_0p1_pct": late_metric(rid, "dormant_frac_tau_0p1"),
             "erank": late_erank(rid),
@@ -370,10 +375,85 @@ def arm_key(run_id, prefix):
 OUT["c3"] = sweep_table("c3_", lambda r: arm_key(r.run_id, "c3_"), "backprop")
 OUT["c5"] = sweep_table("c5_", lambda r: arm_key(r.run_id, "c5_"), "sgd")
 
+# ------------------------------------------------------------------------- C4
+# Survival tables are rebuilt from the gate runs' own per-neuron logs with
+#   python -m src.analysis.survival runs --out dist/surv_gate --null-draws 50
+SURV = ROOT / "dist" / "surv_gate"
+if SURV.exists():
+    LR01 = "lr0p1_"
+    trans = pd.read_parquet(SURV / "transitions.parquet")
+    trans = trans[trans.run_id.str.contains(LR01)]
+    c4: dict = {"n_seeds": int(trans.run_id.nunique()), "recovery": {}}
+    for probe in ("reference", "current"):
+        t = trans[trans.probe == probe]
+        per_layer = {}
+        for lyr, g in t.groupby("layer_idx"):
+            p = (g.n_dead_alive / (g.n_dead_alive + g.n_dead_dead)).to_numpy()
+            e = stratified_bootstrap(p[:, None], n_bootstrap=NBOOT, seed=SEED)
+            per_layer[int(lyr)] = {"pct": 100 * e.point, "lo": 100 * e.lo, "hi": 100 * e.hi}
+        pooled = (
+            t.groupby("run_id")
+            .apply(
+                lambda g: g.n_dead_alive.sum()
+                / (g.n_dead_alive.sum() + g.n_dead_dead.sum()),
+                include_groups=False,
+            )
+            .to_numpy()
+        )
+        e = stratified_bootstrap(pooled[:, None], n_bootstrap=NBOOT, seed=SEED)
+        c4["recovery"][probe] = {
+            "per_layer": per_layer,
+            "pooled": {"pct": 100 * e.point, "lo": 100 * e.lo, "hi": 100 * e.hi},
+        }
+
+    ep = pd.read_parquet(SURV / "episodes.parquet")
+    ep = ep[ep.run_id.str.contains(LR01) & (ep.probe == "reference")]
+    closed = ep[~ep.censored]
+    rec = pd.read_parquet(SURV / "recurrence.parquet")
+    rec = rec[rec.run_id.str.contains(LR01) & (rec.probe == "reference")]
+    c4["episodes"] = {
+        "n_total": int(len(ep)),
+        "median_closed_len": float(closed.length_tasks.median()),
+        "mean_closed_len": float(closed.length_tasks.mean()),
+        "pct_len_one": 100 * float((closed.length_tasks == 1).mean()),
+        "pct_censored": 100 * float(ep.censored.mean()),
+        "pct_censored_per_layer": {
+            int(k): 100 * float(v.censored.mean()) for k, v in ep.groupby("layer_idx")
+        },
+        "median_closed_len_per_layer": {
+            int(k): float(v[~v.censored].length_tasks.median())
+            for k, v in ep.groupby("layer_idx")
+        },
+    }
+    c4["ever_dead_pct"] = 100 * float(iqm(rec.groupby("run_id").ever_dead.mean().to_numpy()))
+    c4["ever_dead_pct_per_layer"] = {
+        int(k): 100 * float(iqm(v.groupby("run_id").ever_dead.mean().to_numpy()))
+        for k, v in rec.groupby("layer_idx")
+    }
+    c4["late_prevalence_pct"] = OUT["c2"]["reference_asymmetry"]["reference_pooled"]
+    OUT["c4"] = c4
+
+# alive share of every recycled set, from recycling.parquet -- the C1/C4 bridge
+OUT["c4_alive_share_pct"] = {
+    arm: {
+        t: 100 - OUT["c1"]["arms"][arm][t]["dead_share_pct"]
+        for t in OUT["c1"]["arms"][arm]
+    }
+    for arm in OUT["c1"]["arms"]
+}
+
 # ------------------------------------------------------------------- compute
+gpu_h, per_extract = 0.0, {}
+for man in sorted((ROOT / "runs" / "_extracts").glob("*/runs.json")):
+    with open(man, "r", encoding="utf-8") as f:
+        entries = json.load(f)
+    h = sum(float((e.get("summary") or {}).get("gpu_hours", 0.0)) for e in entries)
+    per_extract[man.parent.name] = {"runs": len(entries), "gpu_hours": h}
+    gpu_h += h
 OUT["compute"] = {
     "runs_with_local_extracts": int(EX.runs.run_id.nunique()),
-    "per_extract": {k: int(v) for k, v in EX.runs.extract.value_counts().items()},
+    "gpu_hours_local": gpu_h,
+    "per_extract": per_extract,
 }
 
 with open(ROOT / "paper" / "numbers.json", "w", encoding="utf-8") as f:
