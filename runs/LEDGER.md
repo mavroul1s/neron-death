@@ -170,3 +170,40 @@ network stays deader, so its dormant set is bigger) and still underperformed
 slightly, so ReDo's edge is not a dose artefact.
 
 Cumulative: **33.7 / 40 GPU-h** for weeks 1–2.
+
+### 2026-08-08 — paper build: two corrections to `fig1_tau_sweep`, no GPU
+
+Found while writing `paper/` and checking every quoted number back to the
+parquet outputs (`paper/collect_numbers.py`). Both are fixed in
+`src/analysis/figures.py:fig_tau_sweep` and the figure is regenerated; no run
+was re-executed and no other figure changed.
+
+1. **The lower panel plotted the wrong quantity.** The frozen plan defines the
+   C1 headline as "`n_dead_exact / k`, **pooled** over layers and events within
+   a run, measured on the **current-task** probe batch"
+   (`analysis_plan.json:primary_experiment.headline_quantities`). The figure was
+   computing an unweighted mean of `n_dead_exact_ref / k` over event rows — the
+   reference batch, and a row mean rather than a k-weighted pool, so a layer
+   that recycled 3 units counted as much as one that recycled 300. ReDo's dead
+   share therefore read 36.2% → 14.3% instead of the plan's **31.4% → 12.3%**,
+   which is the figure the §B.1 slice-A table in `CLAUDE.md` has carried all
+   along. The reference-batch composition (27.6% → 13.5%) is a real quantity and
+   is reported beside it in the paper, not in place of it.
+
+2. **The title asserted a trend the data does not support.** It read "Recycling
+   helps more as its target set gets less dead". Across the whole τ range ReDo
+   gains **+0.169 pp [0.143, 0.196]** — real, CI excluding zero, and **3.6%** of
+   the +4.76 pp it gains by being switched on at all. Now: "Accuracy barely
+   moves; what gets recycled changes a lot".
+
+`fig4_c4_recurrence` was **not** regenerated: it needs the `random_matched` and
+`inverse_matched` per-neuron logs, which are not on this machine (only the 25
+gate runs' `neurons.parquet` are). The committed version stands.
+
+**Compute, measured rather than estimated.** Summing `gpu_hours` from every
+`summary.json` in `runs/_extracts/*/runs.json` gives **77.71 GPU-h over the 310
+runs with local extracts** — gate 5.53 · tau_a 15.21 · tau_b 12.57 · tau_c
+12.44 · c3 19.00 · setting3 5.37 · setting3_tanh_gate 3.37 · c5 4.21. The
+"~62 GPU-h" in `README.md` was an estimate made before the C3 and tanh-gate
+sessions were counted; 77.71 h is the number the paper's compute appendix uses.
+The 25 Setting 2 runs are excluded — no local extract.
