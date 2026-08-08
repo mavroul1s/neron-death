@@ -1,21 +1,21 @@
 # Fdb version 4
-["bibtex C:/Users/nickb/Documents/projects/neuron-death/paper/build/main"] 1786203007.15632 "C:/Users/nickb/Documents/projects/neuron-death/paper/build/main.aux" "C:/Users/nickb/Documents/projects/neuron-death/paper/build/main.bbl" "C:/Users/nickb/Documents/projects/neuron-death/paper/build/main" 1786203012.72754 0
+["bibtex C:/Users/nickb/Documents/projects/neuron-death/paper/build/main"] 1786203223.04774 "C:/Users/nickb/Documents/projects/neuron-death/paper/build/main.aux" "C:/Users/nickb/Documents/projects/neuron-death/paper/build/main.bbl" "C:/Users/nickb/Documents/projects/neuron-death/paper/build/main" 1786203228.68334 0
   "./refs.bib" 1786202419.89019 12632 6a0a2f62fff99304759b78e20dfbf053 ""
   "./tmlr.bst" 1786201888.99439 26969 9c641e8d820e63bb21b670dde311bfb2 ""
-  "C:/Users/nickb/Documents/projects/neuron-death/paper/build/main.aux" 1786203009.62715 32412 c98a499575bfb879106af9a348dd1ae3 ""
+  "C:/Users/nickb/Documents/projects/neuron-death/paper/build/main.aux" 1786203225.81072 32441 f3d851419765550eed1a0dd0fa36eb0c ""
   (generated)
   "C:/Users/nickb/Documents/projects/neuron-death/paper/build/main.bbl"
   "C:/Users/nickb/Documents/projects/neuron-death/paper/build/main.blg"
   (rewritten before read)
-["bibtex build/main"] 1786203006.66281 "build/main.aux" "build/main.bbl" "build/main" 1786203012.72542 0
+["bibtex build/main"] 1786203222.56753 "build/main.aux" "build/main.bbl" "build/main" 1786203228.68137 0
   "./refs.bib" 1786202419.89019 12632 6a0a2f62fff99304759b78e20dfbf053 ""
   "./tmlr.bst" 1786201888.99439 26969 9c641e8d820e63bb21b670dde311bfb2 ""
-  "build/main.aux" 1786203009.62715 32412 c98a499575bfb879106af9a348dd1ae3 "pdflatex"
+  "build/main.aux" 1786203225.81072 32441 f3d851419765550eed1a0dd0fa36eb0c "pdflatex"
   (generated)
   "build/main.bbl"
   "build/main.blg"
   (rewritten before read)
-["pdflatex"] 1786203007.72702 "main.tex" "build/main.pdf" "main" 1786203012.73005 0
+["pdflatex"] 1786203223.63299 "main.tex" "build/main.pdf" "main" 1786203228.68533 0
   "C:/Users/nickb/AppData/Local/MiKTeX/fonts/map/pdftex/pdftex.map" 1786202928.9107 82507 a9eef8696c92627b87e9975edea03b2a ""
   "C:/Users/nickb/AppData/Local/MiKTeX/miktex/data/le/pdftex/pdflatex.fmt" 1784722281.46007 13367062 2785b74d1ea0c2954045240a0fc408a8 ""
   "C:/Users/nickb/AppData/Local/Programs/MiKTeX/fonts/enc/dvips/lm/lm-ec.enc" 1256929440 2375 baa924870cfb487815765f9094cf3728 ""
@@ -231,12 +231,12 @@
   "C:/Users/nickb/AppData/Local/Programs/MiKTeX/tex/latex/rerunfilecheck/rerunfilecheck.sty" 1751104012 9684 a33a14b82ce60d6e77cb9be689d79ee6 ""
   "C:/Users/nickb/AppData/Local/Programs/MiKTeX/tex/latex/url/url.sty" 1388490452 12796 8edb7d69a20b857904dd0ea757c14ec9 ""
   "C:/Users/nickb/AppData/Local/Programs/MiKTeX/tex/latex/xcolor/xcolor.sty" 1729265222 55384 b454dec21c2d9f45ec0b793f0995b992 ""
-  "C:/Users/nickb/Documents/projects/neuron-death/paper/build/main.aux" 1786203009.62715 32412 c98a499575bfb879106af9a348dd1ae3 ""
-  "C:/Users/nickb/Documents/projects/neuron-death/paper/build/main.bbl" 1786203007.52156 8777 1ed8b2655f1dd910ab6255e218077fc9 "bibtex C:/Users/nickb/Documents/projects/neuron-death/paper/build/main"
-  "C:/Users/nickb/Documents/projects/neuron-death/paper/build/main.out" 1786203009.66035 4096 72131c9d9948a788a7396111b701f490 ""
-  "build/main.aux" 1786203009.62715 32412 c98a499575bfb879106af9a348dd1ae3 "pdflatex"
-  "build/main.bbl" 1786203007.52156 8777 1ed8b2655f1dd910ab6255e218077fc9 "bibtex build/main"
-  "build/main.out" 1786203009.66035 4096 72131c9d9948a788a7396111b701f490 "pdflatex"
+  "C:/Users/nickb/Documents/projects/neuron-death/paper/build/main.aux" 1786203225.81072 32441 f3d851419765550eed1a0dd0fa36eb0c ""
+  "C:/Users/nickb/Documents/projects/neuron-death/paper/build/main.bbl" 1786203223.39104 8777 1ed8b2655f1dd910ab6255e218077fc9 "bibtex C:/Users/nickb/Documents/projects/neuron-death/paper/build/main"
+  "C:/Users/nickb/Documents/projects/neuron-death/paper/build/main.out" 1786203225.85432 4096 72131c9d9948a788a7396111b701f490 ""
+  "build/main.aux" 1786203225.81072 32441 f3d851419765550eed1a0dd0fa36eb0c "pdflatex"
+  "build/main.bbl" 1786203223.39104 8777 1ed8b2655f1dd910ab6255e218077fc9 "bibtex build/main"
+  "build/main.out" 1786203225.85432 4096 72131c9d9948a788a7396111b701f490 "pdflatex"
   "fancyhdr.sty" 1786201889.05975 17086 7ed8cbc4d361ec87392817e0dd4f65ec ""
   "figures/fig1_tau_sweep.pdf" 1786202361.30604 31434 f8df00b5ff11f3b1fe1b236914074a51 ""
   "figures/fig2_c2_definitions.pdf" 1786202361.32866 47275 670d7f6a02d86c20b3dd386185433d8c ""
@@ -247,9 +247,9 @@
   "figures/fig7_c3_anomaly.pdf" 1786202361.46622 28324 a57409234e50ef48cc502bbbdd40df2f ""
   "figures/fig8_c5_optimizers.pdf" 1786202361.49575 28707 639e3c0aa2dde4c3af3fc0265f4655f9 ""
   "figures/fig9_setting3_activations.pdf" 1786202361.5209 27532 c7f64866a76372aa47648bb2e532a6a9 ""
-  "main.tex" 1786202889.77237 82952 935f3300d854e36795179d7521fe80f0 ""
-  "tex/fig_arch.tex" 1786202479.87778 4063 e7d2a69a19d156483a0bb7d3160a2ea5 ""
-  "tex/fig_arms.tex" 1786202449.93585 3896 eacb8cdeeb567b2161ab6b8e9ac32d2e ""
+  "main.tex" 1786203200.50434 83093 a27cc55a2fb24e9c5e543e70abe908d7 ""
+  "tex/fig_arch.tex" 1786203171.98363 4187 b8d7374188bfa6473994f4d3fbc3d057 ""
+  "tex/fig_arms.tex" 1786203146.57472 4568 9761cefd790451cdae1cee6882feb0b8 ""
   "tmlr.sty" 1786201888.90517 6560 e302463e460a0173d5bee936bc95a625 ""
   (generated)
   "build/main.aux"

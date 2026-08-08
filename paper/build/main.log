@@ -1,4 +1,4 @@
-This is pdfTeX, Version 3.141592653-2.6-1.40.29 (MiKTeX 26.5 NEXT) (preloaded format=pdflatex 2026.7.22)  8 AUG 2026 18:30
+This is pdfTeX, Version 3.141592653-2.6-1.40.29 (MiKTeX 26.5 NEXT) (preloaded format=pdflatex 2026.7.22)  8 AUG 2026 18:33
 entering extended mode
  restricted \write18 enabled.
  %&-line parsing enabled.
@@ -851,43 +851,39 @@ Underfull \vbox (badness 2894) has occurred while \output is active []
 
  [4]
 (tex/fig_arch.tex
-Overfull \hbox (99.2924pt too wide) in paragraph at lines 72--81
+Overfull \hbox (44.75792pt too wide) in paragraph at lines 75--84
  [][] 
  []
 
 )
-Underfull \vbox (badness 1603) has occurred while \output is active []
+Underfull \vbox (badness 2020) has occurred while \output is active []
 
  [5]
-(tex/fig_arms.tex
-Overfull \hbox (30.85658pt too wide) in paragraph at lines 67--77
- [][] 
- []
-
-)
+(tex/fig_arms.tex)
 LaTeX Font Info:    Trying to load font information for T1+lmtt on input line 4
 42.
- (C:\Users\nickb\AppData\Local\Programs\MiKTeX\tex/latex/lm\t1lmtt.fd
+
+(C:\Users\nickb\AppData\Local\Programs\MiKTeX\tex/latex/lm\t1lmtt.fd
 File: t1lmtt.fd 2015/05/01 v1.6.1 Font defs for Latin Modern
-)
-[6]
-<figures/fig1_tau_sweep.pdf, id=315, 355.67693pt x 346.15309pt>
+) [6]
+<figures/fig1_tau_sweep.pdf, id=317, 355.67693pt x 346.15309pt>
 File: figures/fig1_tau_sweep.pdf Graphic file (type pdf)
 <use figures/fig1_tau_sweep.pdf>
 Package pdftex.def Info: figures/fig1_tau_sweep.pdf  used on input line 490.
 (pdftex.def)             Requested size: 319.42995pt x 310.8905pt.
- [7] [8 <./figures/fig1_tau_sweep.pdf>]
+
+[7]
+Underfull \vbox (badness 10000) has occurred while \output is active []
+
+ [8 <./figures/fig1_tau_sweep.pdf>]
 <figures/fig2_c2_definitions.pdf, id=423, 513.37343pt x 254.73206pt>
 File: figures/fig2_c2_definitions.pdf Graphic file (type pdf)
 <use figures/fig2_c2_definitions.pdf>
-Package pdftex.def Info: figures/fig2_c2_definitions.pdf  used on input line 63
-9.
+Package pdftex.def Info: figures/fig2_c2_definitions.pdf  used on input line 64
+0.
 (pdftex.def)             Requested size: 422.77661pt x 209.78726pt.
-
-Underfull \vbox (badness 10000) has occurred while \output is active []
-
  [9]
-Overfull \hbox (2.0468pt too wide) in paragraph at lines 673--688
+Overfull \hbox (2.0468pt too wide) in paragraph at lines 674--689
  [][] 
  []
 
@@ -896,85 +892,154 @@ Overfull \hbox (2.0468pt too wide) in paragraph at lines 673--688
 File: figures/fig6_reference_asymmetry.pdf Graphic file (type pdf)
 <use figures/fig6_reference_asymmetry.pdf>
 Package pdftex.def Info: figures/fig6_reference_asymmetry.pdf  used on input li
-ne 749.
+ne 750.
 (pdftex.def)             Requested size: 422.77661pt x 155.77374pt.
 
 
 LaTeX Font Warning: Font shape `T1/lmr/bx/sc' undefined
-(Font)              using `T1/lmr/bx/n' instead on input line 753.
+(Font)              using `T1/lmr/bx/n' instead on input line 754.
 
+
+Underfull \vbox (badness 2680) has occurred while \output is active []
+
+ [11 <./figures/fig6_reference_asymmetry.pdf>]
+<figures/fig7_c3_anomaly.pdf, id=582, 351.48628pt x 255.8304pt>
+File: figures/fig7_c3_anomaly.pdf Graphic file (type pdf)
+<use figures/fig7_c3_anomaly.pdf>
+Package pdftex.def Info: figures/fig7_c3_anomaly.pdf  used on input line 795.
+(pdftex.def)             Requested size: 291.24579pt x 211.99173pt.
+ [12 <./figures/fig7_c3_anomaly.pdf>]
+<figures/fig3_c4_survival.pdf, id=670, 626.76155pt x 220.00418pt>
+File: figures/fig3_c4_survival.pdf Graphic file (type pdf)
+<use figures/fig3_c4_survival.pdf>
+Package pdftex.def Info: figures/fig3_c4_survival.pdf  used on input line 858.
+(pdftex.def)             Requested size: 460.35788pt x 161.59537pt.
 
 Underfull \vbox (badness 10000) has occurred while \output is active []
 
- [11 <./figures/fig6_reference_asymmetry.pdf>]
-<figures/fig7_c3_anomaly.pdf, id=581, 351.48628pt x 255.8304pt>
-File: figures/fig7_c3_anomaly.pdf Graphic file (type pdf)
-<use figures/fig7_c3_anomaly.pdf>
-Package pdftex.def Info: figures/fig7_c3_anomaly.pdf  used on input line 794.
-(pdftex.def)             Requested size: 291.24579pt x 211.99173pt.
- [12 <./figures/fig7_c3_anomaly.pdf>]
-<figures/fig3_c4_survival.pdf, id=669, 626.76155pt x 220.00418pt>
-File: figures/fig3_c4_survival.pdf Graphic file (type pdf)
-<use figures/fig3_c4_survival.pdf>
-Package pdftex.def Info: figures/fig3_c4_survival.pdf  used on input line 857.
-(pdftex.def)             Requested size: 460.35788pt x 161.59537pt.
-
-Underfull \vbox (badness 1132) has occurred while \output is active []
-
  [13 <./figures/fig3_c4_survival.pdf>]
-<figures/fig4_c4_recurrence.pdf, id=754, 540.0376pt x 226.21138pt>
+<figures/fig4_c4_recurrence.pdf, id=755, 540.0376pt x 226.21138pt>
 File: figures/fig4_c4_recurrence.pdf Graphic file (type pdf)
 <use figures/fig4_c4_recurrence.pdf>
-Package pdftex.def Info: figures/fig4_c4_recurrence.pdf  used on input line 926
+Package pdftex.def Info: figures/fig4_c4_recurrence.pdf  used on input line 927
 .
 (pdftex.def)             Requested size: 422.77661pt x 177.09308pt.
- [14 <./figures/fig4_c4_recurrence.pdf>] [15]
-Underfull \hbox (badness 10000) in paragraph at lines 1050--1050
-[]\T1/lmr/m/n/9 inverse-matched col-lapses (Sokar
+ [14 <./figures/fig4_c4_recurrence.pdf>]
+Underfull \hbox (badness 4366) in paragraph at lines 1041--1042
+[]$\OT1/lmr/m/n/9 +0\OML/lmm/m/it/9 :\OT1/lmr/m/n/9 169 \OML/lmm/m/it/9 pp$ \T1
+/lmr/m/n/9 across $\OML/lmm/m/it/9 ^^\$ \T1/lmr/m/n/9 while
  []
 
 
-Overfull \hbox (477.6878pt too wide) in paragraph at lines 1035--1076
- [][] 
+Underfull \hbox (badness 10000) in paragraph at lines 1041--1042
+\T1/lmr/m/n/9 random-matched re-cov-ers
  []
 
-[16]
+
+Underfull \hbox (badness 10000) in paragraph at lines 1044--1045
+[]\T1/lmr/bx/n/9 supported\T1/lmr/m/n/9 ;
+ []
+
+
+Underfull \hbox (badness 5592) in paragraph at lines 1044--1045
+\T1/lmr/m/n/9 strong form re-
+ []
+
+
+Underfull \hbox (badness 4859) in paragraph at lines 1046--1046
+[]\T1/lmr/m/n/9 ReDo $\OMS/lmsy/m/n/9 ^^]$ \T1/lmr/m/n/9 size-matched
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 1051--1051
+[]\T1/lmr/m/n/9 inverse-matched col-
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 1051--1051
+\T1/lmr/m/n/9 lapses ([]Sokar et al.[],
+ []
+
+
+Underfull \hbox (badness 5681) in paragraph at lines 1052--1052
+[]$\OT1/lmr/m/n/9 +3\OML/lmm/m/it/9 :\OT1/lmr/m/n/9 01$ \T1/lmr/m/n/9 to $\OT1/
+lmr/m/n/9 +3\OML/lmm/m/it/9 :\OT1/lmr/m/n/9 31 \OML/lmm/m/it/9 pp$ \T1/lmr/m/it
+/9 above
+ []
+
+
+Underfull \hbox (badness 1642) in paragraph at lines 1056--1056
+[]\T1/lmr/m/n/9 the def-i-ni-tions dis-agree
+ []
+
+
+Underfull \hbox (badness 2057) in paragraph at lines 1057--1057
+[]$\OT1/lmr/m/n/9 3\OML/lmm/m/it/9 :\OT1/lmr/m/n/9 5\OMS/lmsy/m/n/9 ^^B$ \T1/lm
+r/m/n/9 spread; $\OT1/lmr/m/n/9 0\OML/lmm/m/it/9 :\OT1/lmr/m/n/9 00%$ \T1/lmr/m
+/n/9 dead
+ []
+
+
+Underfull \hbox (badness 1803) in paragraph at lines 1057--1057
+\T1/lmr/m/n/9 against $\OT1/lmr/m/n/9 13\OML/lmm/m/it/9 :\OT1/lmr/m/n/9 0 \OML/
+lmm/m/it/9 pp$ \T1/lmr/m/n/9 lost un-der
+ []
+
+
+Underfull \hbox (badness 1635) in paragraph at lines 1059--1060
+[]\T1/lmr/bx/n/9 established\T1/lmr/m/n/9 , six
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 1069--1070
+[]\T1/lmr/bx/n/9 death is re-
+ []
+
+
+Underfull \hbox (badness 7925) in paragraph at lines 1073--1073
+[]\T1/lmr/m/n/9 within-task spike pre-
+ []
+
+
+Underfull \vbox (badness 1859) has occurred while \output is active []
+
+ [15]
+[16] [17]
 LaTeX Font Info:    Trying to load font information for TS1+lmr on input line 1
-202.
+203.
  (C:\Users\nickb\AppData\Local\Programs\MiKTeX\tex/latex/lm\ts1lmr.fd
 File: ts1lmr.fd 2015/05/01 v1.6.1 Font defs for Latin Modern
-)
-[17] [18{C:/Users/nickb/AppData/Local/Programs/MiKTeX/fonts/enc/dvips/lm/lm-ts1
-.enc}] (C:\Users\nickb\Documents\projects\neuron-death\paper\build\main.bbl
+) [18{C:/Users/nickb/AppData/Local/Programs/MiKTeX/fonts/enc/dvips/lm/lm-ts1.en
+c}] (C:\Users\nickb\Documents\projects\neuron-death\paper\build\main.bbl
 [19] [20])
 
 LaTeX Warning: `h' float specifier changed to `ht'.
 
-<figures/fig5_gate_dose_response.pdf, id=919, 467.4534pt x 208.44098pt>
+<figures/fig5_gate_dose_response.pdf, id=921, 467.4534pt x 208.44098pt>
 File: figures/fig5_gate_dose_response.pdf Graphic file (type pdf)
 <use figures/fig5_gate_dose_response.pdf>
 Package pdftex.def Info: figures/fig5_gate_dose_response.pdf  used on input lin
-e 1411.
+e 1412.
 (pdftex.def)             Requested size: 375.80542pt x 167.57675pt.
 
 LaTeX Warning: `h' float specifier changed to `ht'.
 
 [21]
-<figures/fig9_setting3_activations.pdf, id=927, 537.25719pt x 224.75137pt>
+<figures/fig9_setting3_activations.pdf, id=928, 537.25719pt x 224.75137pt>
 File: figures/fig9_setting3_activations.pdf Graphic file (type pdf)
 <use figures/fig9_setting3_activations.pdf>
 Package pdftex.def Info: figures/fig9_setting3_activations.pdf  used on input l
-ine 1439.
+ine 1440.
 (pdftex.def)             Requested size: 403.98956pt x 169.00206pt.
 
 
 LaTeX Warning: `h' float specifier changed to `ht'.
 
-<figures/fig8_c5_optimizers.pdf, id=930, 285.04344pt x 192.4306pt>
+<figures/fig8_c5_optimizers.pdf, id=931, 285.04344pt x 192.4306pt>
 File: figures/fig8_c5_optimizers.pdf Graphic file (type pdf)
 <use figures/fig8_c5_optimizers.pdf>
-Package pdftex.def Info: figures/fig8_c5_optimizers.pdf  used on input line 144
-9.
+Package pdftex.def Info: figures/fig8_c5_optimizers.pdf  used on input line 145
+0.
 (pdftex.def)             Requested size: 403.98956pt x 272.7395pt.
 
 LaTeX Warning: `h' float specifier changed to `ht'.
@@ -982,9 +1047,15 @@ LaTeX Warning: `h' float specifier changed to `ht'.
 
 LaTeX Warning: `h' float specifier changed to `ht'.
 
-[22 <./figures/fig5_gate_dose_response.pdf>] [23 <./figures/fig9_setting3_activ
-ations.pdf> <./figures/fig8_c5_optimizers.pdf>] [24]
-(C:\Users\nickb\Documents\projects\neuron-death\paper\build\main.aux)
+
+Underfull \vbox (badness 2662) has occurred while \output is active []
+
+ [22 <./figures/fig5_gate_dose_response.pdf>]
+Underfull \vbox (badness 10000) has occurred while \output is active []
+
+ [23 <./figures/fig9_setting3_activations.pdf> <./figures/fig8_c5_optimizers.pd
+f>]
+[24] (C:\Users\nickb\Documents\projects\neuron-death\paper\build\main.aux)
  ***********
 LaTeX2e <2026-06-01>
 L3 programming layer <2026-06-18>
@@ -997,13 +1068,13 @@ Package rerunfilecheck Info: File `main.out' has not changed.
 (rerunfilecheck)             Checksum: 72131C9D9948A788A7396111B701F490;4096.
  ) 
 Here is how much of TeX's memory you used:
- 23221 strings out of 467510
- 439211 string characters out of 5408794
- 871153 words of memory out of 5000000
- 51865 multiletter control sequences out of 15000+600000
+ 22875 strings out of 467510
+ 434495 string characters out of 5408794
+ 867390 words of memory out of 5000000
+ 51519 multiletter control sequences out of 15000+600000
  748410 words of font info for 101 fonts, out of 8000000 for 9000
  1141 hyphenation exceptions out of 8191
- 84i,13n,94p,1037b,904s stack positions out of 10000i,1000n,20000p,200000b,200000s
+ 84i,13n,94p,1037b,895s stack positions out of 10000i,1000n,20000p,200000b,200000s
 <C:/Users/nickb/AppData/Local/Programs/MiKTeX/fonts/type1/public/lm/lmbx10.pf
 b><C:/Users/nickb/AppData/Local/Programs/MiKTeX/fonts/type1/public/lm/lmbx7.pfb
 ><C:/Users/nickb/AppData/Local/Programs/MiKTeX/fonts/type1/public/lm/lmbx8.pfb>
@@ -1032,9 +1103,9 @@ b/AppData/Local/Programs/MiKTeX/fonts/type1/public/lm/lmsy9.pfb><C:/Users/nickb
 /AppData/Local/Programs/MiKTeX/fonts/type1/public/lm/lmtt10.pfb><C:/Users/nickb
 /AppData/Local/Programs/MiKTeX/fonts/type1/public/amsfonts/symbols/msbm10.pfb>
 Output written on C:\Users\nickb\Documents\projects\neuron-death\paper\build\ma
-in.pdf (24 pages, 951389 bytes).
+in.pdf (24 pages, 953080 bytes).
 PDF statistics:
- 1317 PDF objects out of 1440 (max. 8388607)
+ 1319 PDF objects out of 1440 (max. 8388607)
  160 named destinations out of 1000 (max. 500000)
  234 words of extra memory for PDF output out of 10000 (max. 10000000)
 

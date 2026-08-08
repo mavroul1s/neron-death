@@ -73,13 +73,13 @@
 \citation{sokar2023dormant}
 \citation{sokar2023dormant}
 \citation{sokar2023dormant}
-\@writefile{lof}{\contentsline {figure}{\numberline {2}{\ignorespaces \textbf  {The three recycling arms.} At every event, in every layer, the $\tau $-dormancy score is computed and $k$ is set to the size of the $\tau $-dormant set. All three arms then recycle exactly $k$ units by the identical procedure --- re-initialise the incoming weights from the layer's original initialisation distribution, zero the outgoing weights \citep  {sokar2023dormant} --- and differ only in \emph  {which} $k$. Because $k$ is recomputed per layer per event rather than fixed as a fraction or a schedule, the comparison isolates the effect of targeting from the effect of dose. Circles are units; shading is their state on the probe batch, which is measured independently of the score that selects them.}}{6}{figure.2}\protected@file@percent }
-\newlabel{fig:arms}{{2}{6}{\textbf {The three recycling arms.} At every event, in every layer, the $\tau $-dormancy score is computed and $k$ is set to the size of the $\tau $-dormant set. All three arms then recycle exactly $k$ units by the identical procedure --- re-initialise the incoming weights from the layer's original initialisation distribution, zero the outgoing weights \citep {sokar2023dormant} --- and differ only in \emph {which} $k$. Because $k$ is recomputed per layer per event rather than fixed as a fraction or a schedule, the comparison isolates the effect of targeting from the effect of dose. Circles are units; shading is their state on the probe batch, which is measured independently of the score that selects them}{figure.2}{}}
+\@writefile{lof}{\contentsline {figure}{\numberline {2}{\ignorespaces \textbf  {The three recycling arms.} At every event, in every layer, the $\tau $-dormancy score is computed and $k$ is set to the size of the $\tau $-dormant set. All three arms then recycle exactly $k$ units by the identical procedure --- re-initialise the incoming weights from the layer's original initialisation distribution, zero the outgoing weights \citep  {sokar2023dormant} --- and differ only in \emph  {which} $k$. Because $k$ is recomputed per layer per event rather than fixed as a fraction or a schedule, the comparison isolates the effect of targeting from the effect of dose. Circles are units; their shading is the state measured on the probe batch, which is independent of the score that selects them.}}{6}{figure.2}\protected@file@percent }
+\newlabel{fig:arms}{{2}{6}{\textbf {The three recycling arms.} At every event, in every layer, the $\tau $-dormancy score is computed and $k$ is set to the size of the $\tau $-dormant set. All three arms then recycle exactly $k$ units by the identical procedure --- re-initialise the incoming weights from the layer's original initialisation distribution, zero the outgoing weights \citep {sokar2023dormant} --- and differ only in \emph {which} $k$. Because $k$ is recomputed per layer per event rather than fixed as a fraction or a schedule, the comparison isolates the effect of targeting from the effect of dose. Circles are units; their shading is the state measured on the probe batch, which is independent of the score that selects them}{figure.2}{}}
 \@writefile{toc}{\contentsline {paragraph}{Two further settings.}{6}{section*.16}\protected@file@percent }
 \@writefile{toc}{\contentsline {subsection}{\numberline {4.2}The three recycling arms}{6}{subsection.4.2}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {4.3}Pre-registration, statistics, and what was frozen}{6}{subsection.4.3}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{What was frozen, and when.}{6}{section*.17}\protected@file@percent }
 \citation{agarwal2021deep}
-\@writefile{toc}{\contentsline {subsection}{\numberline {4.3}Pre-registration, statistics, and what was frozen}{7}{subsection.4.3}\protected@file@percent }
-\@writefile{toc}{\contentsline {paragraph}{What was frozen, and when.}{7}{section*.17}\protected@file@percent }
 \@writefile{toc}{\contentsline {paragraph}{Decision thresholds.}{7}{section*.18}\protected@file@percent }
 \@writefile{toc}{\contentsline {paragraph}{Statistics.}{7}{section*.19}\protected@file@percent }
 \@writefile{toc}{\contentsline {paragraph}{Calibration is separated from pre-registration.}{7}{section*.20}\protected@file@percent }
@@ -101,49 +101,50 @@
 \newlabel{tab:tau}{{2}{9}{The $\tau $-sweep: $190$ runs, $4$ arms, $6$ thresholds, $10$ seeds, $\text {lr}=0.1$. Late-window online accuracy; the no-intervention baseline is $87.683\%$ \ci {87.634}{87.730}. ``dead share'' is the pre-registered headline quantity, the exactly-zero fraction of the set actually recycled. ``$k$'' is the mean number of units recycled per layer per event --- the realised dose. Differences are paired IQM with stratified bootstrap $95\%$ CIs. Every \emph {vs.\ none} entry clears the pre-registered $\gg $ bar}{table.2}{}}
 \@writefile{toc}{\contentsline {paragraph}{The dose confound runs the wrong way, twice.}{9}{section*.27}\protected@file@percent }
 \@writefile{toc}{\contentsline {paragraph}{Robustness.}{9}{section*.28}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {5.2}C2: the definitions do not measure one thing}{9}{subsection.5.2}\protected@file@percent }
+\newlabel{sec:c2}{{5.2}{9}{C2: the definitions do not measure one thing}{subsection.5.2}{}}
+\@writefile{toc}{\contentsline {paragraph}{A factor of $3.5$ on identical activations.}{9}{section*.29}\protected@file@percent }
 \@writefile{lof}{\contentsline {figure}{\numberline {4}{\ignorespaces \textbf  {Three published definitions, one set of activations, per layer.} All quantities are computed on the same forward pass over the same $2048$-example probe batch, so the spread between them is definitional, not statistical.}}{10}{figure.4}\protected@file@percent }
 \newlabel{fig:c2}{{4}{10}{\textbf {Three published definitions, one set of activations, per layer.} All quantities are computed on the same forward pass over the same $2048$-example probe batch, so the spread between them is definitional, not statistical}{figure.4}{}}
 \@writefile{lot}{\contentsline {table}{\numberline {3}{\ignorespaces \textbf  {Change the activation function and the definitions stop agreeing.} Late window, $25 + 15$ runs. The $\tanh $ row is at its own calibrated learning rate; at $\text  {lr}=0.1$ $\tanh $ diverges to chance and is excluded from every table and figure. ``---'' marks $\textsc  {saturated}$ as undefined for unbounded activations, which is what the code returns; reporting $0$ there would be a category error. Drop is early minus late window.}}{10}{table.3}\protected@file@percent }
 \newlabel{tab:acts}{{3}{10}{\textbf {Change the activation function and the definitions stop agreeing.} Late window, $25 + 15$ runs. The $\tanh $ row is at its own calibrated learning rate; at $\text {lr}=0.1$ $\tanh $ diverges to chance and is excluded from every table and figure. ``---'' marks $\dsat $ as undefined for unbounded activations, which is what the code returns; reporting $0$ there would be a category error. Drop is early minus late window}{table.3}{}}
-\@writefile{toc}{\contentsline {subsection}{\numberline {5.2}C2: the definitions do not measure one thing}{10}{subsection.5.2}\protected@file@percent }
-\newlabel{sec:c2}{{5.2}{10}{C2: the definitions do not measure one thing}{subsection.5.2}{}}
-\@writefile{toc}{\contentsline {paragraph}{A factor of $3.5$ on identical activations.}{10}{section*.29}\protected@file@percent }
 \@writefile{toc}{\contentsline {paragraph}{It is not an artefact of a collapsed layer.}{10}{section*.30}\protected@file@percent }
 \@writefile{toc}{\contentsline {paragraph}{The $\tanh $ result.}{10}{section*.31}\protected@file@percent }
 \@writefile{lof}{\contentsline {figure}{\numberline {5}{\ignorespaces \textbf  {$\textsc  {dead-exact}$ measured on the current task's distribution versus a fixed reference distribution, per layer.} The two agree in layers $0$ and $1$ and diverge sharply in the last hidden layer. Distribution-relative death is a last-layer phenomenon, which is a sharper claim than the pooled figure.}}{11}{figure.5}\protected@file@percent }
 \newlabel{fig:refasym}{{5}{11}{\textbf {$\dexact $ measured on the current task's distribution versus a fixed reference distribution, per layer.} The two agree in layers $0$ and $1$ and diverge sharply in the last hidden layer. Distribution-relative death is a last-layer phenomenon, which is a sharper claim than the pooled figure}{figure.5}{}}
 \@writefile{toc}{\contentsline {paragraph}{Smooth activations: weaker than ``by construction'', and dtype-dependent.}{11}{section*.32}\protected@file@percent }
 \@writefile{toc}{\contentsline {paragraph}{Convolutional channels.}{11}{section*.33}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{Death is partly distribution-relative.}{11}{figure.5}\protected@file@percent }
+\citation{chiley2019online}
 \@writefile{lot}{\contentsline {table}{\numberline {4}{\ignorespaces \textbf  {The two anomalies, replicated.} $35$ runs, $5$ seeds, $\text  {lr}=0.1$, late window. $\Delta $ is paired against plain backpropagation. $\textsc  {dead-exact}$ is given on both probe batches because the C3 claim should not depend on that choice, and does not.}}{12}{table.4}\protected@file@percent }
 \newlabel{tab:c3}{{4}{12}{\textbf {The two anomalies, replicated.} $35$ runs, $5$ seeds, $\text {lr}=0.1$, late window. $\Delta $ is paired against plain backpropagation. $\dexact $ is given on both probe batches because the C3 claim should not depend on that choice, and does not}{table.4}{}}
 \@writefile{lof}{\contentsline {figure}{\numberline {6}{\ignorespaces \textbf  {The C3 dissociation is two-dimensional.} Accuracy against dead units, one point per arm. If dead units were the pathology, the arms would lie on a downward line. $L_2$ at its beneficial dose and online normalisation are both up and to the right --- better \emph  {and} deader.}}{12}{figure.6}\protected@file@percent }
 \newlabel{fig:c3}{{6}{12}{\textbf {The C3 dissociation is two-dimensional.} Accuracy against dead units, one point per arm. If dead units were the pathology, the arms would lie on a downward line. $L_2$ at its beneficial dose and online normalisation are both up and to the right --- better \emph {and} deader}{figure.6}{}}
-\@writefile{toc}{\contentsline {paragraph}{Death is partly distribution-relative.}{12}{figure.5}\protected@file@percent }
 \@writefile{toc}{\contentsline {subsection}{\numberline {5.3}C3: helping plasticity while killing more neurons}{12}{subsection.5.3}\protected@file@percent }
 \newlabel{sec:c3}{{5.3}{12}{C3: helping plasticity while killing more neurons}{subsection.5.3}{}}
 \@writefile{toc}{\contentsline {paragraph}{$L_2$ improves accuracy while nearly doubling dead units.}{12}{section*.35}\protected@file@percent }
-\citation{chiley2019online}
+\@writefile{toc}{\contentsline {paragraph}{Online normalisation increases the pathology it was designed to prevent.}{12}{section*.36}\protected@file@percent }
 \citation{ash2020warm}
 \@writefile{lof}{\contentsline {figure}{\numberline {7}{\ignorespaces \textbf  {Neuron mortality as a survival process.} Per-neuron state logged at every one of $200$ task boundaries, $25$ runs with no intervention of any kind. \emph  {(a)} time to first death; \emph  {(b)} probability that a unit dead at one boundary is alive at the next, on both probe distributions; \emph  {(c)} how long silence lasts.}}{13}{figure.7}\protected@file@percent }
 \newlabel{fig:surv}{{7}{13}{\textbf {Neuron mortality as a survival process.} Per-neuron state logged at every one of $200$ task boundaries, $25$ runs with no intervention of any kind. \emph {(a)} time to first death; \emph {(b)} probability that a unit dead at one boundary is alive at the next, on both probe distributions; \emph {(c)} how long silence lasts}{figure.7}{}}
-\@writefile{toc}{\contentsline {paragraph}{Online normalisation increases the pathology it was designed to prevent.}{13}{section*.36}\protected@file@percent }
 \@writefile{toc}{\contentsline {paragraph}{The counterexample that keeps this honest.}{13}{section*.37}\protected@file@percent }
 \@writefile{toc}{\contentsline {paragraph}{Mechanism.}{13}{section*.38}\protected@file@percent }
 \@writefile{toc}{\contentsline {subsection}{\numberline {5.4}C4: death is reversible}{13}{subsection.5.4}\protected@file@percent }
 \newlabel{sec:c4}{{5.4}{13}{C4: death is reversible}{subsection.5.4}{}}
+\@writefile{toc}{\contentsline {paragraph}{A fifth of dead units come back on their own.}{13}{section*.39}\protected@file@percent }
 \@writefile{lof}{\contentsline {figure}{\numberline {8}{\ignorespaces \textbf  {Which units recycling keeps choosing, and what state they were in.} Per-unit recycle counts against a null that holds $k$ fixed per task and per layer and redraws only \emph  {which} units, so any excess concentration is targeting rather than dose.}}{14}{figure.8}\protected@file@percent }
 \newlabel{fig:recur}{{8}{14}{\textbf {Which units recycling keeps choosing, and what state they were in.} Per-unit recycle counts against a null that holds $k$ fixed per task and per layer and redraws only \emph {which} units, so any excess concentration is targeting rather than dose}{figure.8}{}}
-\@writefile{toc}{\contentsline {paragraph}{A fifth of dead units come back on their own.}{14}{section*.39}\protected@file@percent }
 \@writefile{toc}{\contentsline {paragraph}{Death is a state units churn through, not a fate they arrive at.}{14}{section*.40}\protected@file@percent }
 \@writefile{toc}{\contentsline {paragraph}{The first layer is the exception, and should be reported as one.}{14}{section*.41}\protected@file@percent }
 \@writefile{toc}{\contentsline {paragraph}{Do not quote the current-task version of this number.}{14}{section*.42}\protected@file@percent }
 \@writefile{toc}{\contentsline {paragraph}{Why this matters for the rest of the paper.}{14}{section*.43}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{Recycling selects the living.}{14}{figure.8}\protected@file@percent }
 \citation{lyle2023understanding}
 \citation{loshchilov2019decoupled}
 \citation{lyle2023understanding}
+\citation{sokar2023dormant}
 \@writefile{lot}{\contentsline {table}{\numberline {5}{\ignorespaces \textbf  {Optimizers.} $20$ runs, $5$ seeds, late window. SGD runs at its own calibrated learning rate per the protocol, so the SGD-vs-Adam accuracy comparison is not like-for-like; the Adam-default-vs-Lyle-tuned contrast, at identical learning rate, is clean.}}{15}{table.5}\protected@file@percent }
 \newlabel{tab:c5}{{5}{15}{\textbf {Optimizers.} $20$ runs, $5$ seeds, late window. SGD runs at its own calibrated learning rate per the protocol, so the SGD-vs-Adam accuracy comparison is not like-for-like; the Adam-default-vs-Lyle-tuned contrast, at identical learning rate, is clean}{table.5}{}}
-\@writefile{toc}{\contentsline {paragraph}{Recycling selects the living.}{15}{figure.8}\protected@file@percent }
 \@writefile{toc}{\contentsline {subsection}{\numberline {5.5}C5: Adam-induced death is real; its predicted timing is not}{15}{subsection.5.5}\protected@file@percent }
 \newlabel{sec:c5}{{5.5}{15}{C5: Adam-induced death is real; its predicted timing is not}{subsection.5.5}{}}
 \@writefile{toc}{\contentsline {paragraph}{The effect is real and large.}{15}{section*.45}\protected@file@percent }
@@ -169,7 +170,6 @@
 \citation{dohare2024loss}
 \@writefile{toc}{\contentsline {section}{\numberline {8}Limitations}{18}{section.8}\protected@file@percent }
 \newlabel{sec:limitations}{{8}{18}{Limitations}{section.8}{}}
-\@writefile{toc}{\contentsline {section}{\numberline {9}Conclusion}{18}{section.9}\protected@file@percent }
 \bibstyle{tmlr}
 \bibdata{refs}
 \bibcite{agarwal2021deep}{{1}{2021}{{Agarwal et~al.}}{{Agarwal, Schwarzer, Castro, Courville, and Bellemare}}}
@@ -177,6 +177,7 @@
 \bibcite{chiley2019online}{{3}{2019}{{Chiley et~al.}}{{Chiley, Sharapov, Kosson, Koster, Reece, Samaniego de~la Fuente, Subbiah, and James}}}
 \bibcite{dohare2021continual}{{4}{2021}{{Dohare et~al.}}{{Dohare, Sutton, and Mahmood}}}
 \bibcite{dohare2024loss}{{5}{2024}{{Dohare et~al.}}{{Dohare, Hernandez-Garcia, Lan, Rahman, Mahmood, and Sutton}}}
+\@writefile{toc}{\contentsline {section}{\numberline {9}Conclusion}{19}{section.9}\protected@file@percent }
 \bibcite{dufortlabbe2024maxwell}{{6}{2025}{{Dufort-Labb\'e et~al.}}{{Dufort-Labb\'e, D'Oro, Nikishin, Pascanu, Bacon, and Baratin}}}
 \bibcite{elsayed2024addressing}{{7}{2024}{{Elsayed \& Mahmood}}{{Elsayed and Mahmood}}}
 \bibcite{gao2024scaling}{{8}{2024}{{Gao et~al.}}{{Gao, la~Tour, Tillman, Goh, Troll, Radford, Sutskever, Leike, and Wu}}}
@@ -201,22 +202,22 @@
 \citation{dohare2024loss}
 \@writefile{toc}{\contentsline {section}{\numberline {A}The pre-registered analysis plan}{21}{appendix.A}\protected@file@percent }
 \newlabel{app:plan}{{A}{21}{The pre-registered analysis plan}{appendix.A}{}}
-\@writefile{toc}{\contentsline {section}{\numberline {B}The reproduction gate}{21}{appendix.B}\protected@file@percent }
-\newlabel{app:gate}{{B}{21}{The reproduction gate}{appendix.B}{}}
-\@writefile{toc}{\contentsline {paragraph}{Checked before accepting the pass.}{21}{section*.55}\protected@file@percent }
 \@writefile{lot}{\contentsline {table}{\numberline {7}{\ignorespaces The full learning-rate ladder, $25$ runs, $5$ seeds each. Drop is early-window minus late-window online accuracy. This is infrastructure validation, not a finding: it establishes that the phenomenon under study is present in the setting before any intervention is applied.}}{22}{table.7}\protected@file@percent }
 \newlabel{tab:gate}{{7}{22}{The full learning-rate ladder, $25$ runs, $5$ seeds each. Drop is early-window minus late-window online accuracy. This is infrastructure validation, not a finding: it establishes that the phenomenon under study is present in the setting before any intervention is applied}{table.7}{}}
 \@writefile{lof}{\contentsline {figure}{\numberline {9}{\ignorespaces The gate as a dose--response in step size, both criteria. Perfect monotonicity across two decades reproduces \citeauthor  {dohare2024loss}'s finding that the largest step size gives the strongest effect, as a curve rather than at a single point.}}{22}{figure.9}\protected@file@percent }
 \newlabel{fig:gate}{{9}{22}{The gate as a dose--response in step size, both criteria. Perfect monotonicity across two decades reproduces \citeauthor {dohare2024loss}'s finding that the largest step size gives the strongest effect, as a curve rather than at a single point}{figure.9}{}}
+\@writefile{toc}{\contentsline {section}{\numberline {B}The reproduction gate}{22}{appendix.B}\protected@file@percent }
+\newlabel{app:gate}{{B}{22}{The reproduction gate}{appendix.B}{}}
+\@writefile{toc}{\contentsline {paragraph}{Checked before accepting the pass.}{22}{section*.55}\protected@file@percent }
 \@writefile{toc}{\contentsline {section}{\numberline {C}Additional figures}{22}{appendix.C}\protected@file@percent }
 \@writefile{toc}{\contentsline {section}{\numberline {D}Compute and reproducibility}{22}{appendix.D}\protected@file@percent }
 \newlabel{app:compute}{{D}{22}{Compute and reproducibility}{appendix.D}{}}
 \@writefile{toc}{\contentsline {paragraph}{Logged data.}{22}{section*.56}\protected@file@percent }
-\@writefile{toc}{\contentsline {paragraph}{A note on config hashes.}{22}{section*.57}\protected@file@percent }
 \@writefile{lof}{\contentsline {figure}{\numberline {10}{\ignorespaces Four definitions across five activation functions (Table~\ref {tab:acts}). The figure drops any arm within $5\,pp$ of chance and says so on its face, so the diverged $\tanh $-at-$\text  {lr}{=}0.1$ arm cannot reach a plot by accident.}}{23}{figure.10}\protected@file@percent }
 \newlabel{fig:acts}{{10}{23}{Four definitions across five activation functions (Table~\ref {tab:acts}). The figure drops any arm within $5\pp $ of chance and says so on its face, so the diverged $\tanh $-at-$\text {lr}{=}0.1$ arm cannot reach a plot by accident}{figure.10}{}}
 \@writefile{lof}{\contentsline {figure}{\numberline {11}{\ignorespaces Where Adam's death accumulates (Section~\ref {sec:c5}). The panel showing the pre-registered within-task spike is \textbf  {not drawn}: the analysis extract for these runs predates a fix to the extractor that omitted the intra-task table, and the figure states this on its face rather than shipping only the panel that worked. The intra-task numbers in Section~\ref {sec:c5} come from the run outputs directly.}}{23}{figure.11}\protected@file@percent }
 \newlabel{fig:c5fig}{{11}{23}{Where Adam's death accumulates (Section~\ref {sec:c5}). The panel showing the pre-registered within-task spike is \textbf {not drawn}: the analysis extract for these runs predates a fix to the extractor that omitted the intra-task table, and the figure states this on its face rather than shipping only the panel that worked. The intra-task numbers in Section~\ref {sec:c5} come from the run outputs directly}{figure.11}{}}
+\@writefile{toc}{\contentsline {paragraph}{A note on config hashes.}{23}{section*.57}\protected@file@percent }
 \@writefile{lot}{\contentsline {table}{\numberline {8}{\ignorespaces Compute accounting, summed from each run's own recorded \texttt  {gpu\_hours}. All runs on a single NVIDIA T4; two independent configurations were run in parallel, one per GPU. The $25$ CIFAR-10 runs are excluded --- they produced the channel-level measurement in Section~\ref {sec:c2} but their analysis extract is not part of this accounting.}}{24}{table.8}\protected@file@percent }
 \newlabel{tab:compute}{{8}{24}{Compute accounting, summed from each run's own recorded \texttt {gpu\_hours}. All runs on a single NVIDIA T4; two independent configurations were run in parallel, one per GPU. The $25$ CIFAR-10 runs are excluded --- they produced the channel-level measurement in Section~\ref {sec:c2} but their analysis extract is not part of this accounting}{table.8}{}}
 \gdef \@abspage@last{24}

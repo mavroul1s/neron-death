@@ -514,6 +514,7 @@ Differences are paired IQM with stratified bootstrap $95\%$ CIs. Every
 \emph{vs.\ none} entry clears the pre-registered $\gg$ bar.}
 \label{tab:tau}
 \small
+\setlength{\tabcolsep}{4.5pt}
 \begin{tabular}{@{}l r r r r r r@{}}
 \toprule
 & \multicolumn{3}{c}{\textbf{ReDo}} & \multicolumn{3}{c}{\textbf{Size-matched random}} \\
@@ -1032,35 +1033,35 @@ appears we report it together with the effect size, since the rule cannot return
 $\approx$ for any true nonzero effect.}
 \label{tab:summary}
 \small
-\begin{tabular}{@{}c p{0.34\linewidth} l l l@{}}
+\begin{tabular}{@{}c p{0.215\linewidth} p{0.245\linewidth} p{0.215\linewidth} p{0.155\linewidth}@{}}
 \toprule
-& claim & effect & pre-registered rule & verdict \\
+& \textbf{claim} & \textbf{effect} & \textbf{pre-registered rule} & \textbf{verdict} \\
 \midrule
 C1 & ReDo's benefit does not come from reviving dead units &
-accuracy $+0.169\pp$ across $\tau$ while dead share $31.4\% \to 12.3\%$;
-random-matched recovers $88$--$92\%$ &
-``accuracy up, dead share down $\Rightarrow$ C1 confirmed'' &
+$+0.169\pp$ across $\tau$ while dead share $31.4\% \to 12.3\%$; random-matched
+recovers $88$--$92\%$ &
+accuracy up while dead share down $\Rightarrow$ C1 confirmed &
 \textbf{supported}; strong form refuted \\
 \addlinespace
 C1$'$ & ReDo $\gg$ size-matched random &
 $+0.38$ to $+0.61\pp$, CI excludes zero &
-$\gg$ needs $>2\pp$; $\approx$ needs CI $\ni 0$ &
+$\gg$ needs ${>}2\pp$; $\approx$ needs CI $\ni 0$ &
 \textbf{inconclusive} \\
 \addlinespace
-C1$''$ & inverse-matched collapses (Sokar Fig.~15) &
+C1$''$ & inverse-matched collapses \citep{sokar2023dormant} &
 $+3.01$ to $+3.31\pp$ \emph{above} baseline &
-predicted collapse &
+collapse predicted &
 \textbf{refuted} \\
 \addlinespace
 C2 & the definitions disagree materially &
-$3.5\times$ spread; $0.00\%$ vs.\ $13.0\pp$ loss under $\tanh$ &
+$3.5\times$ spread; $0.00\%$ dead against $13.0\pp$ lost under $\tanh$ &
 qualitative target observation &
 \textbf{established}, six ways \\
 \addlinespace
 C3 & $L_2$ helps while increasing death; online norm increases what it prevents &
 $+1.50\pp$ with $20.7 \to 40.2\%$; $+3.16\pp$ with $20.7 \to 28.6\%$ &
 both target observations stated in advance &
-\textbf{confirmed}, both \\
+\textbf{confirmed}, both halves \\
 \addlinespace
 C4 & mortality has characterisable dynamics &
 $21.71\%$ \ci{21.37}{22.21} revival; $87.3\%$ ever dead &
@@ -1068,8 +1069,8 @@ analysis-only, no threshold &
 \textbf{death is reversible} \\
 \addlinespace
 C5 & Adam-induced death is a distinct mechanism &
-$59.3\%$ vs.\ $20.7\%$; but no post-switch spike &
-predicted within-task spike &
+$59.3\%$ vs.\ $20.7\%$ dead, but no post-switch spike &
+within-task spike predicted &
 \textbf{half}: real, timing \textbf{null} \\
 \bottomrule
 \end{tabular}
