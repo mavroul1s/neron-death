@@ -338,11 +338,24 @@ def fig_tau_sweep(ex: Extracts, out: Path) -> Optional[Path]:
         if not rec.empty:
             r = rec[rec.run_id.isin(g.run_id) & (rec.k > 0)]
             if not r.empty:
-                # Composition on the fixed reference batch: the current-task
-                # batch conflates a dead unit with one that is merely silent on
-                # the permutation in force at that moment (CLAUDE.md §5).
-                r = r.assign(dead_frac=r.n_dead_exact_ref / r.k)
-                by_tau = r.groupby("tau").dead_frac.mean() * 100
+                # The frozen plan's headline quantity, verbatim: "n_dead_exact /
+                # k, POOLED over layers and events within a run, measured on the
+                # CURRENT-task probe batch" (analysis_plan.json,
+                # primary_experiment.headline_quantities). Both halves matter.
+                # Pooling is a k-weighted sum, not a mean over event rows -- a
+                # row mean gives a layer that recycled 3 units the same weight
+                # as one that recycled 300. And the current batch is the plan's
+                # choice because it is what Dohare et al. and Sokar et al.
+                # measure, so the number stays comparable to theirs; the
+                # reference-batch composition is a real and separate quantity,
+                # reported alongside in the paper rather than substituted here.
+                by_tau = (
+                    r.groupby("tau").apply(
+                        lambda gg: gg.n_dead_exact.sum() / gg.k.sum(),
+                        include_groups=False,
+                    )
+                    * 100
+                )
                 ax_dead.plot(by_tau.index, by_tau.values, color=c, marker="o",
                              markeredgecolor=SURFACE, markeredgewidth=1.0, zorder=4)
                 ax_dead.annotate(
@@ -352,7 +365,13 @@ def fig_tau_sweep(ex: Extracts, out: Path) -> Optional[Path]:
                 )
 
     ax_acc.set_ylabel("late-window online accuracy (%)")
-    ax_acc.set_title("Recycling helps more as its target set gets less dead", loc="left")
+    # The earlier title, "Recycling helps more as its target set gets less
+    # dead", asserted a trend the measurement does not support: across the whole
+    # tau range ReDo gains +0.169 pp [0.143, 0.196], which is 3.6% of the
+    # +4.76 pp it gains by being switched on at all. Directionally real,
+    # substantively flat -- and a title is what a reader remembers.
+    ax_acc.set_title("Accuracy barely moves; what gets recycled changes a lot",
+                     loc="left")
     ax_dead.set_ylabel("of the recycled set,\n% genuinely dead")
     ax_dead.set_xlabel(r"dormancy threshold $\tau$")
     ax_dead.set_ylim(bottom=0)
