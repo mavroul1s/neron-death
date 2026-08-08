@@ -1,0 +1,185 @@
+\begin{thebibliography}{24}
+\providecommand{\natexlab}[1]{#1}
+\providecommand{\url}[1]{\texttt{#1}}
+\expandafter\ifx\csname urlstyle\endcsname\relax
+  \providecommand{\doi}[1]{doi: #1}\else
+  \providecommand{\doi}{doi: \begingroup \urlstyle{rm}\Url}\fi
+
+\bibitem[Agarwal et~al.(2021)Agarwal, Schwarzer, Castro, Courville, and
+  Bellemare]{agarwal2021deep}
+Rishabh Agarwal, Max Schwarzer, Pablo~Samuel Castro, Aaron Courville, and
+  Marc~G. Bellemare.
+\newblock Deep reinforcement learning at the edge of the statistical precipice.
+\newblock In \emph{Advances in Neural Information Processing Systems
+  (NeurIPS)}, 2021.
+\newblock arXiv:2108.13264.
+
+\bibitem[Ash \& Adams(2020)Ash and Adams]{ash2020warm}
+Jordan~T. Ash and Ryan~P. Adams.
+\newblock On warm-starting neural network training.
+\newblock In \emph{Advances in Neural Information Processing Systems
+  (NeurIPS)}, 2020.
+\newblock arXiv:1910.08475.
+
+\bibitem[Chiley et~al.(2019)Chiley, Sharapov, Kosson, Koster, Reece, Samaniego
+  de~la Fuente, Subbiah, and James]{chiley2019online}
+Vitaliy Chiley, Ilya Sharapov, Atli Kosson, Urs Koster, Ryan Reece, Sofia
+  Samaniego de~la Fuente, Vishal Subbiah, and Michael James.
+\newblock Online normalization for training neural networks.
+\newblock In \emph{Advances in Neural Information Processing Systems
+  (NeurIPS)}, 2019.
+\newblock arXiv:1905.05894.
+
+\bibitem[Dohare et~al.(2021)Dohare, Sutton, and Mahmood]{dohare2021continual}
+Shibhansh Dohare, Richard~S. Sutton, and A.~Rupam Mahmood.
+\newblock Continual backprop: Stochastic gradient descent with persistent
+  randomness.
+\newblock \emph{arXiv preprint arXiv:2108.06325}, 2021.
+
+\bibitem[Dohare et~al.(2024)Dohare, Hernandez-Garcia, Lan, Rahman, Mahmood, and
+  Sutton]{dohare2024loss}
+Shibhansh Dohare, J.~Fernando Hernandez-Garcia, Qingfeng Lan, Parash Rahman,
+  A.~Rupam Mahmood, and Richard~S. Sutton.
+\newblock Loss of plasticity in deep continual learning.
+\newblock \emph{Nature}, 632\penalty0 (8026):\penalty0 768--774, 2024.
+\newblock \doi{10.1038/s41586-024-07711-7}.
+
+\bibitem[Dufort-Labb\'e et~al.(2025)Dufort-Labb\'e, D'Oro, Nikishin, Pascanu,
+  Bacon, and Baratin]{dufortlabbe2024maxwell}
+Simon Dufort-Labb\'e, Pierluca D'Oro, Evgenii Nikishin, Razvan Pascanu,
+  Pierre-Luc Bacon, and Aristide Baratin.
+\newblock Maxwell's demon at work: Efficient pruning by leveraging saturation
+  of neurons.
+\newblock \emph{Transactions on Machine Learning Research}, 2025.
+\newblock arXiv:2403.07688.
+
+\bibitem[Elsayed \& Mahmood(2024)Elsayed and Mahmood]{elsayed2024addressing}
+Mohamed Elsayed and A.~Rupam Mahmood.
+\newblock Addressing loss of plasticity and catastrophic forgetting in
+  continual learning.
+\newblock In \emph{International Conference on Learning Representations
+  (ICLR)}, 2024.
+\newblock arXiv:2404.00781.
+
+\bibitem[Gao et~al.(2024)Gao, la~Tour, Tillman, Goh, Troll, Radford, Sutskever,
+  Leike, and Wu]{gao2024scaling}
+Leo Gao, Tom~Dupr\'e la~Tour, Henk Tillman, Gabriel Goh, Rajan Troll, Alec
+  Radford, Ilya Sutskever, Jan Leike, and Jeffrey Wu.
+\newblock Scaling and evaluating sparse autoencoders.
+\newblock \emph{arXiv preprint arXiv:2406.04093}, 2024.
+
+\bibitem[Glorot et~al.(2011)Glorot, Bordes, and Bengio]{glorot2011deep}
+Xavier Glorot, Antoine Bordes, and Yoshua Bengio.
+\newblock Deep sparse rectifier neural networks.
+\newblock In \emph{Proceedings of the 14th International Conference on
+  Artificial Intelligence and Statistics (AISTATS)}, 2011.
+
+\bibitem[Gulcehre et~al.(2022)Gulcehre, Srinivasan, Sygnowski, Ostrovski,
+  Farajtabar, Hoffman, Pascanu, and Doucet]{gulcehre2022empirical}
+Caglar Gulcehre, Srivatsan Srinivasan, Jakub Sygnowski, Georg Ostrovski,
+  Mehrdad Farajtabar, Matt Hoffman, Razvan Pascanu, and Arnaud Doucet.
+\newblock An empirical study of implicit regularization in deep offline
+  reinforcement learning.
+\newblock \emph{Transactions on Machine Learning Research}, 2022.
+\newblock arXiv:2207.02099.
+
+\bibitem[Hernandez-Garcia et~al.(2025)Hernandez-Garcia, Dohare, Luo, and
+  Sutton]{hernandezgarcia2025reinitializing}
+J.~Fernando Hernandez-Garcia, Shibhansh Dohare, Jun Luo, and Richard~S. Sutton.
+\newblock Reinitializing weights vs units for maintaining plasticity in neural
+  networks.
+\newblock \emph{arXiv preprint arXiv:2508.00212}, 2025.
+
+\bibitem[Klein et~al.(2024)Klein, Luther, McAuliffe, Miklautz, Plant, and
+  Tschiatschek]{klein2024plasticity}
+Timo Klein, Christoph Luther, Manus McAuliffe, Lukas Miklautz, Claudia Plant,
+  and Sebastian Tschiatschek.
+\newblock Plasticity loss in deep reinforcement learning: A survey.
+\newblock \emph{arXiv preprint arXiv:2411.04832}, 2024.
+
+\bibitem[Kooi et~al.(2024)Kooi, Yang, Hoogendoorn, and
+  Fran\c{c}ois-Lavet]{kooi2024hadamard}
+Jacob~E. Kooi, Zhao Yang, Mark Hoogendoorn, and Vincent Fran\c{c}ois-Lavet.
+\newblock Hadamard representations: Augmenting hyperbolic tangents in rl.
+\newblock \emph{arXiv preprint arXiv:2406.09079}, 2024.
+
+\bibitem[Kumar et~al.(2021)Kumar, Agarwal, Ghosh, and
+  Levine]{kumar2021implicit}
+Aviral Kumar, Rishabh Agarwal, Dibya Ghosh, and Sergey Levine.
+\newblock Implicit under-parameterization inhibits data-efficient deep
+  reinforcement learning.
+\newblock In \emph{International Conference on Learning Representations
+  (ICLR)}, 2021.
+\newblock arXiv:2010.14498.
+
+\bibitem[Kumar et~al.(2023)Kumar, Marklund, and Van~Roy]{kumar2023maintaining}
+Saurabh Kumar, Henrik Marklund, and Benjamin Van~Roy.
+\newblock Maintaining plasticity in continual learning via regenerative
+  regularization.
+\newblock \emph{arXiv preprint arXiv:2308.11958}, 2023.
+
+\bibitem[Loshchilov \& Hutter(2019)Loshchilov and
+  Hutter]{loshchilov2019decoupled}
+Ilya Loshchilov and Frank Hutter.
+\newblock Decoupled weight decay regularization.
+\newblock In \emph{International Conference on Learning Representations
+  (ICLR)}, 2019.
+
+\bibitem[Lu et~al.(2020)Lu, Shin, Su, and Karniadakis]{lu2020dying}
+Lu~Lu, Yeonjong Shin, Yanhui Su, and George~Em Karniadakis.
+\newblock Dying {ReLU} and initialization: Theory and numerical examples.
+\newblock \emph{Communications in Computational Physics}, 2020.
+\newblock arXiv:1903.06733.
+
+\bibitem[Lyle et~al.(2023)Lyle, Zheng, Nikishin, Avila~Pires, Pascanu, and
+  Dabney]{lyle2023understanding}
+Clare Lyle, Zeyu Zheng, Evgenii Nikishin, Bernardo Avila~Pires, Razvan Pascanu,
+  and Will Dabney.
+\newblock Understanding plasticity in neural networks.
+\newblock In \emph{Proceedings of the 40th International Conference on Machine
+  Learning (ICML)}, volume 202 of \emph{PMLR}, 2023.
+\newblock arXiv:2303.01486.
+
+\bibitem[Lyle et~al.(2024)Lyle, Zheng, Khetarpal, van Hasselt, Pascanu,
+  Martens, and Dabney]{lyle2024disentangling}
+Clare Lyle, Zeyu Zheng, Khimya Khetarpal, Hado van Hasselt, Razvan Pascanu,
+  James Martens, and Will Dabney.
+\newblock Disentangling the causes of plasticity loss in neural networks.
+\newblock In \emph{Conference on Lifelong Learning Agents (CoLLAs)}, 2024.
+\newblock arXiv:2402.18762.
+
+\bibitem[Maas et~al.(2013)Maas, Hannun, and Ng]{maas2013rectifier}
+Andrew~L. Maas, Awni~Y. Hannun, and Andrew~Y. Ng.
+\newblock Rectifier nonlinearities improve neural network acoustic models.
+\newblock In \emph{ICML Workshop on Deep Learning for Audio, Speech and
+  Language Processing}, 2013.
+
+\bibitem[Nikishin et~al.(2022)Nikishin, Schwarzer, D'Oro, Bacon, and
+  Courville]{nikishin2022primacy}
+Evgenii Nikishin, Max Schwarzer, Pierluca D'Oro, Pierre-Luc Bacon, and Aaron
+  Courville.
+\newblock The primacy bias in deep reinforcement learning.
+\newblock In \emph{Proceedings of the 39th International Conference on Machine
+  Learning (ICML)}, 2022.
+\newblock arXiv:2205.07802.
+
+\bibitem[Sokar et~al.(2023)Sokar, Agarwal, Castro, and Evci]{sokar2023dormant}
+Ghada Sokar, Rishabh Agarwal, Pablo~Samuel Castro, and Utku Evci.
+\newblock The dormant neuron phenomenon in deep reinforcement learning.
+\newblock In \emph{Proceedings of the 40th International Conference on Machine
+  Learning (ICML)}, volume 202 of \emph{PMLR}, 2023.
+\newblock arXiv:2302.12902.
+
+\bibitem[Voita et~al.(2024)Voita, Ferrando, and Nalmpantis]{voita2024neurons}
+Elena Voita, Javier Ferrando, and Christoforos Nalmpantis.
+\newblock Neurons in large language models: Dead, n-gram, positional.
+\newblock In \emph{Findings of the Association for Computational Linguistics
+  (ACL)}, 2024.
+\newblock arXiv:2309.04827.
+
+\bibitem[Whitaker \& Whitley(2023)Whitaker and Whitley]{whitaker2023synaptic}
+Tim Whitaker and Darrell Whitley.
+\newblock Synaptic stripping: How pruning can bring dead neurons back to life.
+\newblock \emph{arXiv preprint arXiv:2302.05818}, 2023.
+
+\end{thebibliography}

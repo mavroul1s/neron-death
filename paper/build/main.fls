@@ -238,8 +238,14 @@ INPUT C:\Users\nickb\AppData\Local\Programs\MiKTeX\tex\latex\epstopdf-pkg\epstop
 INPUT C:\Users\nickb\AppData\Local\Programs\MiKTeX\tex\latex\00miktex\epstopdf-sys.cfg
 INPUT C:\Users\nickb\AppData\Local\Programs\MiKTeX\tex\latex\00miktex\epstopdf-sys.cfg
 INPUT C:\Users\nickb\AppData\Local\Programs\MiKTeX\tex\latex\00miktex\epstopdf-sys.cfg
-OUTPUT C:\Users\nickb\Documents\projects\neuron-death\paper\build\main.out
+INPUT C:\Users\nickb\Documents\projects\neuron-death\paper\build\main.out
+INPUT C:\Users\nickb\Documents\projects\neuron-death\paper\build\main.out
+INPUT C:\Users\nickb\Documents\projects\neuron-death\paper\build\main.out
+INPUT C:\Users\nickb\Documents\projects\neuron-death\paper\build\main.out
 OUTPUT C:\Users\nickb\Documents\projects\neuron-death\paper\build\main.pdf
+INPUT C:\Users\nickb\Documents\projects\neuron-death\paper\build\main.out
+INPUT C:\Users\nickb\Documents\projects\neuron-death\paper\build\main.out
+OUTPUT C:\Users\nickb\Documents\projects\neuron-death\paper\build\main.out
 INPUT C:\Users\nickb\AppData\Local\Programs\MiKTeX\fonts\tfm\public\lm\ec-lmr17.tfm
 INPUT C:\Users\nickb\AppData\Local\Programs\MiKTeX\fonts\tfm\public\lm\ec-lmbx12.tfm
 INPUT C:\Users\nickb\AppData\Local\Programs\MiKTeX\tex\latex\lm\t1lmss.fd
@@ -379,6 +385,9 @@ INPUT C:\Users\nickb\AppData\Local\Programs\MiKTeX\tex\latex\lm\ts1lmr.fd
 INPUT C:\Users\nickb\AppData\Local\Programs\MiKTeX\tex\latex\lm\ts1lmr.fd
 INPUT C:\Users\nickb\AppData\Local\Programs\MiKTeX\fonts\tfm\public\lm\ts1-lmr10.tfm
 INPUT C:\Users\nickb\AppData\Local\Programs\MiKTeX\fonts\enc\dvips\lm\lm-ts1.enc
+INPUT C:\Users\nickb\Documents\projects\neuron-death\paper\build\main.bbl
+INPUT C:\Users\nickb\Documents\projects\neuron-death\paper\build\main.bbl
+INPUT C:\Users\nickb\Documents\projects\neuron-death\paper\build\main.bbl
 INPUT .\figures\fig5_gate_dose_response.pdf
 INPUT .\figures\fig5_gate_dose_response.pdf
 INPUT .\figures\fig5_gate_dose_response.pdf

@@ -2,58 +2,47 @@ This is BibTeX, Version 0.99e
 Capacity: max_strings=200000, hash_size=200000, hash_prime=170003
 The top-level auxiliary file: main.aux
 Reallocating 'name_of_file' (item size: 1) to 5 items.
-I couldn't open style file tmlr.bst
----line 173 of file main.aux
- : \bibstyle{tmlr
- :               }
-I'm skipping whatever remains of this command
+The style file: tmlr.bst
 Reallocating 'name_of_file' (item size: 1) to 5 items.
-I couldn't open database file refs.bib
----line 174 of file main.aux
- : \bibdata{refs
- :              }
-I'm skipping whatever remains of this command
-I found no database files---while reading file main.aux
-I found no style file---while reading file main.aux
+Database file #1: refs.bib
 You've used 24 entries,
-            0 wiz_defined-function locations,
-            109 strings with 926 characters,
-and the built_in function-call counts, 0 in all, are:
-= -- 0
-> -- 0
-< -- 0
-+ -- 0
-- -- 0
-* -- 0
-:= -- 0
-add.period$ -- 0
-call.type$ -- 0
-change.case$ -- 0
-chr.to.int$ -- 0
-cite$ -- 0
-duplicate$ -- 0
-empty$ -- 0
-format.name$ -- 0
-if$ -- 0
-int.to.chr$ -- 0
-int.to.str$ -- 0
-missing$ -- 0
-newline$ -- 0
-num.names$ -- 0
-pop$ -- 0
-preamble$ -- 0
-purify$ -- 0
+            2773 wiz_defined-function locations,
+            711 strings with 9955 characters,
+and the built_in function-call counts, 12445 in all, are:
+= -- 974
+> -- 1053
+< -- 6
++ -- 351
+- -- 327
+* -- 1067
+:= -- 1992
+add.period$ -- 86
+call.type$ -- 24
+change.case$ -- 181
+chr.to.int$ -- 24
+cite$ -- 48
+duplicate$ -- 531
+empty$ -- 883
+format.name$ -- 359
+if$ -- 2539
+int.to.chr$ -- 1
+int.to.str$ -- 1
+missing$ -- 24
+newline$ -- 142
+num.names$ -- 96
+pop$ -- 392
+preamble$ -- 1
+purify$ -- 157
 quote$ -- 0
-skip$ -- 0
+skip$ -- 406
 stack$ -- 0
-substring$ -- 0
-swap$ -- 0
-text.length$ -- 0
+substring$ -- 73
+swap$ -- 41
+text.length$ -- 2
 text.prefix$ -- 0
 top$ -- 0
-type$ -- 0
+type$ -- 264
 warning$ -- 0
-while$ -- 0
+while$ -- 74
 width$ -- 0
-write$ -- 0
-(There were 4 error messages)
+write$ -- 326
