@@ -1046,6 +1046,7 @@ def build_all(
     extracts_root="runs/_extracts",
     survival_dirs: Optional[Sequence[str]] = None,
     out="figures",
+    tanh_lr: Optional[float] = None,
 ) -> List[Path]:
     use_paper_style()
     out = Path(out)
@@ -1068,7 +1069,8 @@ def build_all(
         fig_setting3_activations,
         fig_setting2_channels,
     ):
-        path = fn(ex, out)
+        kwargs = {"tanh_lr": tanh_lr} if fn is fig_setting3_activations else {}
+        path = fn(ex, out, **kwargs)
         print(f"  {'wrote' if path else 'skipped'} {fn.__name__}"
               + (f" -> {path.name}" if path else " (no extract for it yet)"))
         if path:
@@ -1093,8 +1095,11 @@ def main(argv=None) -> int:
     ap.add_argument("--survival", nargs="*", default=[],
                     help="directories written by `python -m src.analysis.survival --out`")
     ap.add_argument("--out", default="figures")
+    ap.add_argument("--tanh-lr", type=float, default=None,
+                    help="learning rate that passed configs/setting3_tanh_gate; "
+                         "swaps the diverged tanh row for the calibrated runs")
     args = ap.parse_args(argv)
-    build_all(args.extracts, args.survival, out=args.out)
+    build_all(args.extracts, args.survival, out=args.out, tanh_lr=args.tanh_lr)
     return 0
 
 
