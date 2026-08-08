@@ -15,6 +15,7 @@ the frozen ones (IQM + stratified bootstrap, `configs/analysis_plan.json`) via
 from __future__ import annotations
 
 import json
+import re
 import sys
 from pathlib import Path
 
@@ -360,16 +361,14 @@ def sweep_table(prefix, key_fn, baseline_key):
     return out
 
 
-def c3_key(r):
-    if r.norm and r.norm != "none":
-        return f"norm_{r.norm}"
-    if r.l2 > 0:
-        return f"l2_{r.l2:g}"
-    return r.run_id.split("_lr")[0].replace("c3_", "")
+def arm_key(run_id, prefix):
+    """`c3_l2_1em3_lr0p1_s2` -> `l2_1em3`; `c5_adam_default_s0` -> `adam_default`."""
+    stem = re.sub(r"_s\d+$", "", run_id[len(prefix):])
+    return re.sub(r"_lr[0-9p]+$", "", stem)
 
 
-OUT["c3"] = sweep_table("c3_", c3_key, "backprop")
-OUT["c5"] = sweep_table("c5_", lambda r: r.run_id.split("_lr")[0].replace("c5_", ""), "sgd")
+OUT["c3"] = sweep_table("c3_", lambda r: arm_key(r.run_id, "c3_"), "backprop")
+OUT["c5"] = sweep_table("c5_", lambda r: arm_key(r.run_id, "c5_"), "sgd")
 
 # ------------------------------------------------------------------- compute
 OUT["compute"] = {
