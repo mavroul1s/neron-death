@@ -103,6 +103,10 @@ def _grid(ax, axis: str = "y") -> None:
     ax.set_axisbelow(True)
 
 
+#: How many trailing points a direct label is anchored to; see `_end_labels`.
+_TAIL = 10
+
+
 def _end_labels(ax, entries, min_gap_frac: float = 0.085) -> None:
     """Label series at their right-hand endpoint, nudged apart where they collide.
 
@@ -955,7 +959,8 @@ def fig_c5_optimizers(ex: Extracts, out: Path, lr: Optional[float] = None) -> Op
         if g.empty:
             continue
         ax_task.plot(g.index, g.values, color=colours[arm], lw=1.8)
-        ends.append((arm.replace("_", " "), g.index[-1], g.values[-1], colours[arm]))
+        ends.append((arm.replace("_", " "), g.index[-1],
+                     float(g.values[-_TAIL:].mean()), colours[arm]))
     _end_labels(ax_task, ends)
     ax_task.set_xlabel("task")
     ax_task.set_ylabel("% dead_exact")
