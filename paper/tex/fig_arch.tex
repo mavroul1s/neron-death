@@ -41,11 +41,6 @@
 \draw[ar, cCur] (pc.east) -- (in.north west);
 \draw[ar, cRef] (pr.east) -- (in.south west);
 
-\node[note, anchor=west] at (7.55,0)
-  {every metric is computed on \emph{both} and both are logged; the gap between
-   them is what separates a dead unit from one merely silent on the permutation
-   being trained on right now};
-
 % ---- the training timeline ---------------------------------------------------
 \def\ty{-2.35}
 \draw[black!45, line width=0.6pt] (-4.7,\ty) -- (7.1,\ty);
@@ -63,14 +58,16 @@
   \draw[cEv, line width=0.7pt, densely dashed] (\x,\ty-0.14) -- (\x,\ty-0.42);
   \node[circle, fill=cEv, inner sep=1.1pt] at (\x,\ty-0.42) {};
 }
-\node[note, anchor=west] at (7.55,\ty)
-  {\textcolor{cCur}{$\bullet$} full probe at every boundary: all metrics, per
-   neuron.\\[1pt]
-   \textcolor{cEv}{$\bullet$} recycling event: score, select $k$, reset.};
-\node[sub, anchor=north west] at (-4.7,\ty-0.62)
-  {$469$ steps per task ($60{,}000$ images, batch $128$, one pass); recycling
-   fires every $F{=}1000$ steps, so events and boundaries are deliberately
-   unaligned};
+\node[sub, anchor=west] at (-4.7,\ty+0.85)
+  {\textcolor{cCur}{$\bullet$}~full probe at every task boundary: every metric,
+   on both batches, per neuron};
+\node[sub, anchor=west] at (-4.7,\ty-0.78)
+  {\textcolor{cEv}{$\bullet$}~recycling event: score every unit, select $k$,
+   reset --- fires every $F{=}1000$ optimizer steps against $469$ steps per
+   task,};
+\node[sub, anchor=west] at (-4.7,\ty-1.06)
+  {\phantom{\textcolor{cEv}{$\bullet$}~}so events and task boundaries are
+   deliberately unaligned};
 
 \end{tikzpicture}
 \caption{\textbf{Setting and instrument.} A $784$--$500$--$500$--$500$--$10$
@@ -78,9 +75,11 @@ ReLU MLP on online permuted MNIST: each task is a fresh input permutation seen
 for a single pass, and the outcome measure is online accuracy, scored on the
 forward pass taken \emph{before} each update. Every death metric is evaluated on
 two probe batches --- the current task's distribution and a reference
-distribution fixed for the entire run --- and per-neuron state is written at
-every task boundary. Recycling events are governed by an optimizer-step counter
-($F=1000$) rather than by task index, so they fall inside tasks rather than at
-their edges.}
+distribution fixed for the entire run --- and both are logged, because the gap
+between them is what separates a unit that is dead from one that is merely
+silent on the permutation being trained on right now. Per-neuron state is
+written at every task boundary; recycling events are governed by an
+optimizer-step counter rather than by task index, so they fall inside tasks
+rather than at their edges.}
 \label{fig:arch}
 \end{figure}
